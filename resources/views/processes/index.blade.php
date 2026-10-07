@@ -46,6 +46,15 @@
         .tree-node { display: flex; gap: 12px; align-items: baseline; padding: 8px; }
         .tree-command { max-width: 80ch; white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
         .tree-meta { color: #526173; }
+        .test-processes { margin-top: 28px; }
+        .test-processes h2 { font-size: 1.2rem; }
+        .launch-form { margin: 16px 0; }
+        .launch-form button { padding: 10px 18px; border: 0; border-radius: 6px; background: #1d4ed8; color: #fff; font: inherit; cursor: pointer; }
+        .launch-form button:disabled { background: #64748b; cursor: not-allowed; }
+        .notice { padding: 12px 16px; border-radius: 6px; }
+        .notice-success { background: #dcfce7; color: #166534; }
+        .notice-error { background: #fee2e2; color: #991b1b; }
+        .managed-table { min-width: 750px; }
     </style>
 </head>
 <body>
@@ -125,6 +134,54 @@
             @else
                 <p>No hay procesos disponibles para construir el árbol.</p>
             @endif
+        </section>
+        <section class="test-processes" aria-labelledby="test-processes-title">
+            <h2 id="test-processes-title">Procesos de prueba</h2>
+            <p>Inicia un proceso controlado de 300 segundos. Los registros muestran el estado guardado al crearlo.</p>
+            @if (session('test_process_success'))
+                <p class="notice notice-success" role="status">{{ session('test_process_success') }}</p>
+            @endif
+            @if (session('test_process_error'))
+                <p class="notice notice-error" role="alert">{{ session('test_process_error') }}</p>
+            @endif
+            @if ($managedProcessesUnavailable)
+                <p class="notice notice-error" role="alert">No se pudo consultar el registro de procesos de prueba.</p>
+            @endif
+            <form class="launch-form" method="POST" action="{{ route('processes.test.store') }}">
+                @csrf
+                <button type="submit" @disabled($managedProcessesUnavailable)>Lanzar proceso de prueba</button>
+            </form>
+            <div class="table-container" role="region" aria-labelledby="test-processes-title" tabindex="0">
+                <table id="managed-process-table" class="managed-table">
+                    <caption>Procesos creados por SysMonitor</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col" class="numeric">PID</th>
+                            <th scope="col">Tipo</th>
+                            <th scope="col">Comando controlado</th>
+                            <th scope="col" class="numeric">UID</th>
+                            <th scope="col">Estado registrado</th>
+                            <th scope="col">Fecha/hora de creación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($managedProcesses as $managedProcess)
+                            <tr>
+                                <td class="numeric">{{ $managedProcess->pid }}</td>
+                                <td>{{ $managedProcess->process_type }}</td>
+                                <td class="command">{{ $managedProcess->command_label }}</td>
+                                <td class="numeric">{{ $managedProcess->owner_uid }}</td>
+                                <td>{{ $managedProcess->status }}</td>
+                                <td>{{ $managedProcess->launched_at->format('Y-m-d H:i:s') }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="empty">No hay procesos de prueba registrados.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </section>
     </main>
 </body>

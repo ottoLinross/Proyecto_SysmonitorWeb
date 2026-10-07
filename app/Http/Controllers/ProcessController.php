@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ManagedProcess;
 use App\Services\System\ProcessService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Throwable;
 
 class ProcessController extends Controller
 {
@@ -87,6 +89,14 @@ class ProcessController extends Controller
                 ?: $left['pid'] <=> $right['pid'];
         });
 
+        $managedProcessesUnavailable = false;
+        try {
+            $managedProcesses = ManagedProcess::query()->orderByDesc('launched_at')->orderByDesc('id')->get();
+        } catch (Throwable) {
+            $managedProcesses = collect();
+            $managedProcessesUnavailable = true;
+        }
+
         return view('processes.index', [
             'processes' => $processes,
             'q' => $query,
@@ -98,6 +108,8 @@ class ProcessController extends Controller
             'stateSummary' => $stateSummary,
             'stateLabels' => self::STATE_LABELS,
             'processTree' => $processTree,
+            'managedProcesses' => $managedProcesses,
+            'managedProcessesUnavailable' => $managedProcessesUnavailable,
         ]);
     }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\System\ProcessService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -10,6 +11,8 @@ use Tests\TestCase;
 
 class ProcessTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_processes_page_displays_the_process_table(): void
     {
         $process = $this->exampleProcess();
