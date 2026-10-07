@@ -10,6 +10,13 @@
         main { max-width: 1440px; margin: 0 auto; padding: 32px 20px; }
         h1 { margin: 0 0 12px; font-size: 1.8rem; }
         .description { margin: 0 0 24px; color: #526173; }
+        .state-summary { margin-bottom: 24px; }
+        .state-summary h2 { margin: 0 0 8px; font-size: 1.2rem; }
+        .state-summary p { margin: 0 0 16px; color: #526173; }
+        .state-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 0; }
+        .state-card { padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+        .state-card dt { color: #526173; }
+        .state-card dd { margin: 8px 0 0; font-size: 1.8rem; font-weight: 600; font-variant-numeric: tabular-nums; }
         .search-form { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 20px; }
         .search-form input[type="text"] { flex: 1; min-width: 180px; padding: 10px 12px; border: 1px solid #94a3b8; border-radius: 6px; font: inherit; }
         .search-form button { padding: 10px 18px; border: 0; border-radius: 6px; background: #1d4ed8; color: #fff; font: inherit; cursor: pointer; }
@@ -34,6 +41,18 @@
     <main>
         <h1 id="processes-title">Módulo de Procesos</h1>
         <p class="description">Información actual de los procesos del sistema.</p>
+        <section class="state-summary" aria-labelledby="state-summary-title">
+            <h2 id="state-summary-title">Resumen por estados</h2>
+            <p>Conteos globales del sistema, independientes de la búsqueda y el orden de la tabla.</p>
+            <dl class="state-cards">
+                @foreach ($stateLabels as $code => $description)
+                    <div class="state-card">
+                        <dt>{{ $code }} - {{ $description }}</dt>
+                        <dd id="state-count-{{ $code }}">{{ $stateSummary[$code] }}</dd>
+                    </div>
+                @endforeach
+            </dl>
+        </section>
         <form class="search-form" method="GET" action="{{ route('processes.index') }}">
             <label for="process-search">Buscar procesos</label>
             <input id="process-search" type="text" name="q" value="{{ $q }}" placeholder="Buscar en cualquier columna">

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\System\ProcessService;
+use Illuminate\Testing\TestResponse;
 use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -283,6 +284,122 @@ class ProcessTest extends TestCase
         $response->assertDontSee($query, false);
         $response->assertDontSee('<script>', false);
         $response->assertSee('href="'.e(route('processes.index', ['q' => $query, 'sort' => 'pid', 'direction' => 'desc'])).'"', false);
+    }
+
+    public function test_state_summary_counts_all_five_states_and_their_modifiers(): void
+    {
+        $processes = $this->processesForSummary();
+        $this->mockProcesses($processes);
+
+        $response = $this->get('/procesos');
+
+        $response->assertOk();
+        $this->assertStateSummary($response, ['R' => 2, 'S' => 3, 'D' => 1, 'Z' => 1, 'T' => 2]);
+        $response->assertViewHas('processes', $processes);
+        $response->assertSeeText('Resumen por estados');
+
+        foreach (['R - Ejecutándose', 'S - Dormidos', 'D - Espera no interrumpible', 'Z - Zombies', 'T - Detenidos'] as $label) {
+            $response->assertSeeText($label);
+        }
+
+        foreach (['Ss', 'S+', 'R+', 'Tl'] as $state) {
+            $response->assertSee('<td>'.$state.'</td>', false);
+        }
+    }
+
+    public function test_state_summary_shows_zero_counts_when_the_service_is_empty(): void
+    {
+        $this->mockProcesses([]);
+
+        $response = $this->get('/procesos');
+
+        $response->assertOk();
+        $this->assertStateSummary($response, ['R' => 0, 'S' => 0, 'D' => 0, 'Z' => 0, 'T' => 0]);
+        $response->assertSeeText('No hay procesos disponibles para mostrar.');
+    }
+
+    #[DataProvider('ignoredStates')]
+    public function test_unknown_empty_and_null_states_do_not_break_the_page(?string $state): void
+    {
+        $processes = [
+            array_replace($this->exampleProcess(), ['pid' => 10, 'state' => $state]),
+            array_replace($this->exampleProcess(), ['pid' => 11, 'state' => 'R']),
+        ];
+        $this->mockProcesses($processes);
+
+        // Ordenar por estado también debe tolerar un valor null.
+        $response = $this->get('/procesos?sort=state&direction=asc');
+
+        $response->assertOk();
+        $this->assertStateSummary($response, ['R' => 1, 'S' => 0, 'D' => 0, 'Z' => 0, 'T' => 0]);
+        $response->assertViewHas('processes', function (array $visible) use ($state): bool {
+            return count($visible) === 2
+                && collect($visible)->firstWhere('pid', 10)['state'] === $state;
+        });
+    }
+
+    public static function ignoredStates(): array
+    {
+        return [
+            'unknown' => ['?'],
+            'other Linux state' => ['I'],
+            'lowercase stopped' => ['t'],
+            'empty' => [''],
+            'null' => [null],
+        ];
+    }
+
+    #[DataProvider('summaryTableOptions')]
+    public function test_search_and_sort_do_not_change_the_global_summary(array $parameters, array $expectedPids): void
+    {
+        $processes = $this->processesForSummary();
+        $this->mockProcesses($processes);
+
+        $response = $this->get('/procesos?'.http_build_query($parameters));
+
+        $response->assertOk();
+        $this->assertStateSummary($response, ['R' => 2, 'S' => 3, 'D' => 1, 'Z' => 1, 'T' => 2]);
+        $response->assertViewHas('processes', function (array $visible) use ($expectedPids): bool {
+            return array_column($visible, 'pid') === $expectedPids;
+        });
+    }
+
+    public static function summaryTableOptions(): array
+    {
+        return [
+            'filtered table' => [['q' => 'summary-12'], [12]],
+            'no matches' => [['q' => 'no-matches'], []],
+            'pid descending' => [['sort' => 'pid', 'direction' => 'desc'], [18, 17, 16, 15, 14, 13, 12, 11, 10]],
+            'cpu ascending' => [['sort' => 'cpu_percent', 'direction' => 'asc'], [10, 11, 12, 13, 14, 15, 16, 17, 18]],
+            'state descending' => [['sort' => 'state', 'direction' => 'desc'], [16, 18, 17, 13, 14, 12, 11, 10, 15]],
+            'search and sort together' => [['q' => 'target', 'sort' => 'cpu_percent', 'direction' => 'desc'], [16, 10]],
+        ];
+    }
+
+    private function assertStateSummary(TestResponse $response, array $expected): void
+    {
+        $response->assertViewHas('stateSummary', $expected);
+
+        foreach ($expected as $state => $count) {
+            $response->assertSee('<dd id="state-count-'.$state.'">'.$count.'</dd>', false);
+        }
+    }
+
+    private function processesForSummary(): array
+    {
+        $processes = [];
+
+        foreach (['R', 'R+', 'S', 'Ss', 'S+', 'D', 'Z', 'T', 'Tl'] as $index => $state) {
+            $processes[] = array_replace($this->exampleProcess(), [
+                'pid' => 10 + $index,
+                'state' => $state,
+                'user' => in_array($index, [0, 6], true) ? 'summary-target' : 'worker',
+                'cpu_percent' => (float) $index,
+                'command' => '/usr/bin/summary-'.(10 + $index),
+            ]);
+        }
+
+        return $processes;
     }
 
     private function mockProcesses(array $processes): void

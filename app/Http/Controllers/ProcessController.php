@@ -22,6 +22,14 @@ class ProcessController extends Controller
 
     private const NUMERIC_COLUMNS = ['pid', 'ppid', 'nice', 'cpu_percent', 'memory_percent', 'memory_kb'];
 
+    private const STATE_LABELS = [
+        'R' => 'Ejecutándose',
+        'S' => 'Dormidos',
+        'D' => 'Espera no interrumpible',
+        'Z' => 'Zombies',
+        'T' => 'Detenidos',
+    ];
+
     public function index(Request $request, ProcessService $processService): View
     {
         $query = $request->query('q', '');
@@ -40,6 +48,17 @@ class ProcessController extends Controller
 
         $processes = $processService->getProcesses();
         $hasProcesses = $processes !== [];
+        $stateSummary = array_fill_keys(array_keys(self::STATE_LABELS), 0);
+
+        // El resumen representa la lista global, antes de buscar u ordenar.
+        foreach ($processes as $process) {
+            $state = $process['state'] ?? null;
+            $code = is_string($state) ? ($state[0] ?? '') : '';
+
+            if (array_key_exists($code, $stateSummary)) {
+                $stateSummary[$code]++;
+            }
+        }
 
         if ($query !== '') {
             $processes = array_values(array_filter($processes, function (array $process) use ($query): bool {
@@ -60,7 +79,7 @@ class ProcessController extends Controller
         usort($processes, function (array $left, array $right) use ($sort, $direction): int {
             $comparison = in_array($sort, self::NUMERIC_COLUMNS, true)
                 ? $left[$sort] <=> $right[$sort]
-                : strcmp(mb_strtolower($left[$sort]), mb_strtolower($right[$sort]));
+                : strcmp(mb_strtolower((string) $left[$sort]), mb_strtolower((string) $right[$sort]));
 
             // Los empates mantienen un orden consistente por PID.
             return ($direction === 'desc' ? -$comparison : $comparison)
@@ -75,6 +94,8 @@ class ProcessController extends Controller
             'hasProcesses' => $hasProcesses,
             'columns' => self::COLUMNS,
             'numericColumns' => self::NUMERIC_COLUMNS,
+            'stateSummary' => $stateSummary,
+            'stateLabels' => self::STATE_LABELS,
         ]);
     }
 }
