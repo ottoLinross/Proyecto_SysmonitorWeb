@@ -10,6 +10,12 @@
         main { max-width: 1440px; margin: 0 auto; padding: 32px 20px; }
         h1 { margin: 0 0 12px; font-size: 1.8rem; }
         .description { margin: 0 0 24px; color: #526173; }
+        .search-form { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .search-form input[type="text"] { flex: 1; min-width: 180px; padding: 10px 12px; border: 1px solid #94a3b8; border-radius: 6px; font: inherit; }
+        .search-form button { padding: 10px 18px; border: 0; border-radius: 6px; background: #1d4ed8; color: #fff; font: inherit; cursor: pointer; }
+        a { color: #1d4ed8; }
+        th a { display: block; color: inherit; text-decoration: none; }
+        th a:hover { text-decoration: underline; }
         .table-container { max-height: 70vh; overflow: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; }
         .table-container:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
         table { width: 100%; min-width: 1050px; border-spacing: 0; font-size: 0.9rem; }
@@ -28,20 +34,29 @@
     <main>
         <h1 id="processes-title">Módulo de Procesos</h1>
         <p class="description">Información actual de los procesos del sistema.</p>
+        <form class="search-form" method="GET" action="{{ route('processes.index') }}">
+            <label for="process-search">Buscar procesos</label>
+            <input id="process-search" type="text" name="q" value="{{ $q }}" placeholder="Buscar en cualquier columna">
+            <input type="hidden" name="sort" value="{{ $sort }}">
+            <input type="hidden" name="direction" value="{{ $direction }}">
+            <button type="submit">Buscar</button>
+            <a href="{{ route('processes.index', ['sort' => $sort, 'direction' => $direction]) }}">Limpiar búsqueda</a>
+        </form>
         <div class="table-container" role="region" aria-labelledby="processes-title" tabindex="0">
             <table>
                 <caption>Procesos del sistema</caption>
                 <thead>
                     <tr>
-                        <th scope="col" class="numeric">PID</th>
-                        <th scope="col" class="numeric">PPID</th>
-                        <th scope="col">Usuario</th>
-                        <th scope="col">Estado</th>
-                        <th scope="col" class="numeric">Nice</th>
-                        <th scope="col" class="numeric">CPU %</th>
-                        <th scope="col" class="numeric">Memoria %</th>
-                        <th scope="col" class="numeric">Memoria RSS (KB)</th>
-                        <th scope="col">Comando</th>
+                        @foreach ($columns as $column => $label)
+                            <th scope="col" class="{{ in_array($column, $numericColumns, true) ? 'numeric' : '' }}" aria-sort="{{ $sort === $column ? ($direction === 'asc' ? 'ascending' : 'descending') : 'none' }}">
+                                <a href="{{ route('processes.index', ['q' => $q, 'sort' => $column, 'direction' => $sort === $column && $direction === 'asc' ? 'desc' : 'asc']) }}">
+                                    {{ $label }}
+                                    @if ($sort === $column)
+                                        <span aria-hidden="true">{{ $direction === 'asc' ? '↑' : '↓' }}</span>
+                                    @endif
+                                </a>
+                            </th>
+                        @endforeach
                     </tr>
                 </thead>
                 <tbody>
@@ -59,7 +74,13 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="empty">No hay procesos disponibles para mostrar.</td>
+                            <td colspan="9" class="empty">
+                                @if ($hasProcesses && $q !== '')
+                                    No se encontraron procesos que coincidan con la búsqueda.
+                                @else
+                                    No hay procesos disponibles para mostrar.
+                                @endif
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
