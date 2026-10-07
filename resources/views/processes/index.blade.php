@@ -35,6 +35,17 @@
         .numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .command { min-width: 320px; white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
         .empty { padding: 28px 16px; text-align: center; color: #526173; }
+        .process-tree { margin-top: 28px; }
+        .process-tree h2 { font-size: 1.2rem; }
+        .tree-container { max-height: 70vh; overflow: auto; padding: 16px; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; }
+        .tree-container:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+        .tree-container ul { list-style: none; padding-left: 24px; margin: 0; min-width: max-content; }
+        .tree-container > ul { padding-left: 0; }
+        .tree-container li { margin: 8px 0; }
+        .tree-container li > ul { border-left: 1px solid #cbd5e1; margin-left: 8px; }
+        .tree-node { display: flex; gap: 12px; align-items: baseline; padding: 8px; }
+        .tree-command { max-width: 80ch; white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
+        .tree-meta { color: #526173; }
     </style>
 </head>
 <body>
@@ -105,6 +116,16 @@
                 </tbody>
             </table>
         </div>
+        <section class="process-tree" aria-labelledby="process-tree-title">
+            <h2 id="process-tree-title">Árbol de Procesos</h2>
+            @if ($processTree !== [])
+                <div class="tree-container" role="region" aria-labelledby="process-tree-title" tabindex="0">
+                    @include('processes.partials.tree-node', ['processTree' => $processTree])
+                </div>
+            @else
+                <p>No hay procesos disponibles para construir el árbol.</p>
+            @endif
+        </section>
     </main>
 </body>
 </html>

@@ -13,7 +13,7 @@ class ProcessTest extends TestCase
     public function test_processes_page_displays_the_process_table(): void
     {
         $process = $this->exampleProcess();
-        $this->mock(ProcessService::class, function (MockInterface $mock) use ($process) {
+        $this->partialMock(ProcessService::class, function (MockInterface $mock) use ($process) {
             $mock->shouldReceive('getProcesses')->once()->andReturn([$process]);
         });
 
@@ -40,7 +40,7 @@ class ProcessTest extends TestCase
 
     public function test_processes_page_handles_an_empty_list(): void
     {
-        $this->mock(ProcessService::class, function (MockInterface $mock) {
+        $this->partialMock(ProcessService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getProcesses')->once()->andReturn([]);
         });
 
@@ -60,7 +60,7 @@ class ProcessTest extends TestCase
             'state' => '<i>S</i>',
             'command' => '/usr/bin/example --label "two words" <script>alert("test")</script>',
         ]);
-        $this->mock(ProcessService::class, function (MockInterface $mock) use ($process) {
+        $this->partialMock(ProcessService::class, function (MockInterface $mock) use ($process) {
             $mock->shouldReceive('getProcesses')->once()->andReturn([$process]);
         });
 
@@ -85,7 +85,7 @@ class ProcessTest extends TestCase
         $response->assertOk();
         $response->assertViewHas('processes', [$processes[0]]);
         $response->assertSeeText($processes[0]['command']);
-        $response->assertDontSeeText($processes[1]['command']);
+        $this->assertStringNotContainsString(e($processes[1]['command']), $this->tableHtml($response));
     }
 
     public static function searchQueries(): array
@@ -402,9 +402,149 @@ class ProcessTest extends TestCase
         return $processes;
     }
 
+    #[DataProvider('treeTableOptions')]
+    public function test_the_global_tree_is_rendered_independently_of_table_parameters(array $parameters, array $expectedTablePids): void
+    {
+        $processes = $this->treeProcesses();
+        $this->mockProcesses($processes);
+        $byPid = array_column($processes, null, 'pid');
+        $expectedTree = [
+            array_replace($byPid[5], ['children' => []]),
+            array_replace($byPid[10], ['children' => [
+                array_replace($byPid[20], ['children' => [array_replace($byPid[40], ['children' => []])]]),
+                array_replace($byPid[30], ['children' => []]),
+            ]]),
+        ];
+
+        $response = $this->get('/procesos?'.http_build_query($parameters));
+
+        $response->assertOk();
+        $response->assertSeeText('Árbol de Procesos');
+        $response->assertViewHas('processTree', $expectedTree);
+        $response->assertViewHas('processes', fn (array $visible): bool => array_column($visible, 'pid') === $expectedTablePids);
+        $this->assertStateSummary($response, ['R' => 0, 'S' => 5, 'D' => 0, 'Z' => 0, 'T' => 0]);
+
+        foreach ($processes as $process) {
+            $response->assertSeeText('PID '.$process['pid']);
+            $response->assertSee('class="tree-command">'.e($process['command']).'</span>', false);
+            $this->assertSame(1, substr_count($response->getContent(), 'data-tree-pid="'.$process['pid'].'"'));
+        }
+
+        // Comprobar la jerarquía HTML real, además de la estructura entregada a Blade.
+        $document = new \DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($document);
+        $this->assertSame('10', $xpath->evaluate('string(//li[@data-tree-pid="20"]/parent::ul/parent::li/@data-tree-pid)'));
+        $this->assertSame('20', $xpath->evaluate('string(//li[@data-tree-pid="40"]/parent::ul/parent::li/@data-tree-pid)'));
+        $this->assertSame('10', $xpath->evaluate('string(//li[@data-tree-pid="30"]/parent::ul/parent::li/@data-tree-pid)'));
+    }
+
+    public static function treeTableOptions(): array
+    {
+        return [
+            'default' => [[], [5, 10, 20, 30, 40]],
+            'search leaves one table row' => [['q' => 'tree-40'], [40]],
+            'search leaves no table rows' => [['q' => 'absent'], []],
+            'pid descending' => [['sort' => 'pid', 'direction' => 'desc'], [40, 30, 20, 10, 5]],
+            'command ascending' => [['sort' => 'command', 'direction' => 'asc'], [10, 20, 30, 40, 5]],
+            'search and sort' => [['q' => 'tree-40', 'sort' => 'command', 'direction' => 'desc'], [40]],
+        ];
+    }
+
+    public function test_the_empty_tree_displays_a_friendly_message(): void
+    {
+        $this->mockProcesses([]);
+
+        $response = $this->get('/procesos');
+
+        $response->assertOk();
+        $response->assertViewHas('processTree', []);
+        $response->assertSeeText('Árbol de Procesos');
+        $response->assertSeeText('No hay procesos disponibles para construir el árbol.');
+        $response->assertDontSee('data-tree-pid=', false);
+    }
+
+    public function test_the_tree_escapes_commands_users_and_states(): void
+    {
+        $process = array_replace($this->exampleProcess(), [
+            'ppid' => 0,
+            'command' => '<script>alert("tree")</script> --label "two words"',
+            'user' => '<b>tree-user</b>',
+            'state' => '<i>S</i>',
+        ]);
+        $this->mockProcesses([$process]);
+
+        $response = $this->get('/procesos');
+
+        $response->assertOk();
+        $response->assertSee('class="tree-command">'.e($process['command']).'</span>', false);
+        $response->assertSee('Usuario: '.e($process['user']).' · Estado: '.e($process['state']), false);
+        foreach (['command', 'user', 'state'] as $field) {
+            $response->assertDontSee($process[$field], false);
+        }
+    }
+
+    #[DataProvider('cyclicTreeParents')]
+    public function test_anomalous_relations_render_each_process_once(array $parents): void
+    {
+        $processes = [];
+        foreach ($parents as $pid => $ppid) {
+            $processes[] = array_replace($this->exampleProcess(), ['pid' => $pid, 'ppid' => $ppid]);
+        }
+        $this->mockProcesses($processes);
+
+        $response = $this->get('/procesos');
+
+        $response->assertOk();
+        foreach (array_keys($parents) as $pid) {
+            $this->assertSame(1, substr_count($response->getContent(), 'data-tree-pid="'.$pid.'"'));
+        }
+    }
+
+    public static function cyclicTreeParents(): array
+    {
+        return ['self parent' => [[10 => 10]], 'cycle with descendant' => [[10 => 20, 20 => 10, 30 => 20]]];
+    }
+
+    public function test_a_deep_tree_renders_without_recursive_blade_calls(): void
+    {
+        $processes = [];
+        for ($pid = 1; $pid <= 400; $pid++) {
+            $processes[] = array_replace($this->exampleProcess(), ['pid' => $pid, 'ppid' => $pid - 1]);
+        }
+        $this->mockProcesses($processes);
+
+        $response = $this->get('/procesos');
+
+        $response->assertOk();
+        $this->assertSame(400, substr_count($response->getContent(), 'data-tree-pid="'));
+        $response->assertSee('data-tree-pid="400"', false);
+    }
+
+    private function treeProcesses(): array
+    {
+        $processes = [];
+        foreach ([30 => 10, 40 => 20, 5 => 999, 20 => 10, 10 => 0] as $pid => $ppid) {
+            $processes[] = array_replace($this->exampleProcess(), [
+                'pid' => $pid,
+                'ppid' => $ppid,
+                'command' => '/usr/bin/tree-'.$pid,
+            ]);
+        }
+
+        return $processes;
+    }
+
+    private function tableHtml(TestResponse $response): string
+    {
+        $this->assertSame(1, preg_match('/<table\b[^>]*>.*?<\/table>/s', $response->getContent(), $matches));
+
+        return $matches[0];
+    }
+
     private function mockProcesses(array $processes): void
     {
-        $this->mock(ProcessService::class, function (MockInterface $mock) use ($processes) {
+        $this->partialMock(ProcessService::class, function (MockInterface $mock) use ($processes) {
             $mock->shouldReceive('getProcesses')->once()->andReturn($processes);
         });
     }

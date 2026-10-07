@@ -47,6 +47,7 @@ class ProcessController extends Controller
         }
 
         $processes = $processService->getProcesses();
+        $processTree = $processService->buildProcessTree($processes);
         $hasProcesses = $processes !== [];
         $stateSummary = array_fill_keys(array_keys(self::STATE_LABELS), 0);
 
@@ -96,6 +97,7 @@ class ProcessController extends Controller
             'numericColumns' => self::NUMERIC_COLUMNS,
             'stateSummary' => $stateSummary,
             'stateLabels' => self::STATE_LABELS,
+            'processTree' => $processTree,
         ]);
     }
 }

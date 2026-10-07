@@ -58,6 +58,76 @@ class ProcessService
     }
 
     /**
+     * Transforma una fotografía de procesos sin leer el sistema ni modificar la entrada.
+     *
+     * @return list<array>
+     */
+    public function buildProcessTree(array $processes): array
+    {
+        $nodes = [];
+
+        foreach ($processes as $process) {
+            $pid = filter_var($process['pid'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+            if ($pid === false || isset($nodes[$pid])) {
+                continue;
+            }
+
+            $nodes[$pid] = array_replace($process, ['children' => []]);
+        }
+
+        ksort($nodes, SORT_NUMERIC);
+        $parents = [];
+
+        foreach ($nodes as $pid => $node) {
+            $ppid = filter_var($node['ppid'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+            $parents[$pid] = $ppid !== false && $ppid !== 0 && $ppid !== $pid && isset($nodes[$ppid])
+                ? $ppid
+                : null;
+        }
+
+        // Recorrer enlaces de padres una sola vez y cortar todos los miembros de cada ciclo.
+        $visited = [];
+
+        foreach (array_keys($nodes) as $pid) {
+            $path = [];
+            $positions = [];
+            $current = $pid;
+
+            while ($current !== null && ! isset($visited[$current]) && ! isset($positions[$current])) {
+                $positions[$current] = count($path);
+                $path[] = $current;
+                $current = $parents[$current];
+            }
+
+            if ($current !== null && isset($positions[$current])) {
+                foreach (array_slice($path, $positions[$current]) as $cyclePid) {
+                    $parents[$cyclePid] = null;
+                }
+            }
+
+            foreach ($path as $pathPid) {
+                $visited[$pathPid] = true;
+            }
+        }
+
+        $tree = [];
+
+        // Referencias sobre un grafo ya acíclico: cada nodo se incorpora exactamente una vez.
+        foreach (array_keys($nodes) as $pid) {
+            $parent = $parents[$pid];
+
+            if ($parent === null) {
+                $tree[] = &$nodes[$pid];
+            } else {
+                $nodes[$parent]['children'][] = &$nodes[$pid];
+            }
+        }
+
+        return $tree;
+    }
+
+    /**
      * Un fallo de lectura devuelve null sin propagar la salida de error del sistema.
      */
     protected function readProcessOutput(): ?string
