@@ -70,6 +70,35 @@ class TestProcessIdentityReaderTest extends TestCase
         $this->reader([])->read(0);
     }
 
+    public function test_a_stopped_process_retains_a_valid_identity(): void
+    {
+        $files = $this->validFiles();
+        $files['/proc/42/stat'] = self::stat('12345', 'T');
+
+        $this->assertSame(['pid' => 42, 'owner_uid' => 1000, 'start_time_ticks' => 12345], $this->reader($files)->read(42));
+    }
+
+    public function test_exited_detection_requires_the_same_starttime(): void
+    {
+        $files = $this->validFiles();
+        $files['/proc/42/stat'] = self::stat('12345', 'Z');
+        $reader = $this->reader($files);
+
+        $this->assertTrue($reader->hasExited(42, 12345));
+        $this->assertFalse($reader->hasExited(42, 67890));
+        $this->assertFalse($reader->hasExited(0, 12345));
+    }
+
+    public function test_missing_and_unreadable_stat_are_distinguished_from_confirmed_exit(): void
+    {
+        $files = $this->validFiles();
+        $files['/proc/42/stat'] = null;
+
+        $this->assertFalse($this->reader($files)->hasExited(42, 12345));
+        $this->assertFalse($this->reader($this->validFiles())->hasExited(42, 12345));
+        $this->assertTrue($this->reader([])->hasExited(42, 12345));
+    }
+
     private static function stat(string $ticks, string $state = 'S', string $name = 'sleep'): string
     {
         return '42 ('.$name.') '.implode(' ', [$state, ...array_fill(0, 18, '0'), $ticks]);
@@ -104,6 +133,11 @@ class TestProcessIdentityReaderTest extends TestCase
                 }
 
                 return $value;
+            }
+
+            public function exists(int $pid): bool
+            {
+                return array_key_exists('/proc/'.$pid.'/stat', $this->files);
             }
         };
     }

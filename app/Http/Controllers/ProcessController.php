@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ManagedProcess;
 use App\Services\System\ProcessService;
+use App\Services\System\ProcessSignalService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Throwable;
@@ -110,6 +111,7 @@ class ProcessController extends Controller
             'processTree' => $processTree,
             'managedProcesses' => $managedProcesses,
             'managedProcessesUnavailable' => $managedProcessesUnavailable,
+            'allowedSignals' => ProcessSignalService::SIGNALS,
         ]);
     }
 }

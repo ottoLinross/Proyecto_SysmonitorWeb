@@ -42,6 +42,35 @@ class TestProcessIdentityReader
         return $contents === false ? null : $contents;
     }
 
+    public function exists(int $pid): bool
+    {
+        if ($pid <= 0) {
+            return false;
+        }
+
+        $path = '/proc/'.$pid;
+        clearstatcache(true, $path);
+
+        return @is_dir($path);
+    }
+
+    public function hasExited(int $pid, int $startTimeTicks): bool
+    {
+        if ($pid <= 0 || $startTimeTicks <= 0) {
+            return false;
+        }
+        if (! $this->exists($pid)) {
+            return true;
+        }
+
+        $stat = $this->readFile('/proc/'.$pid.'/stat');
+        $end = $stat === null ? false : strrpos($stat, ')');
+        $state = $end === false ? '' : substr(ltrim(substr($stat, $end + 1)), 0, 1);
+
+        return in_array($state, ['Z', 'X', 'x'], true)
+            && $this->parseStat($stat, $pid, true) === $startTimeTicks;
+    }
+
     private function parseUid(?string $status): ?int
     {
         if ($status === null || ! preg_match('/^Uid:\s+([0-9]+)\s+[0-9]+\s+[0-9]+\s+[0-9]+\s*$/m', $status, $matches)) {
@@ -53,7 +82,7 @@ class TestProcessIdentityReader
         return $uid === false ? null : $uid;
     }
 
-    private function parseStat(?string $stat, int $pid): ?int
+    private function parseStat(?string $stat, int $pid, bool $allowExited = false): ?int
     {
         if ($stat === null || ! preg_match('/^([1-9][0-9]*) \(/', $stat, $matches)
             || (int) $matches[1] !== $pid || ($end = strrpos($stat, ')')) === false) {
@@ -63,7 +92,8 @@ class TestProcessIdentityReader
         // comm (campo 2) puede contener espacios y paréntesis; los campos empiezan tras su último cierre.
         $fields = preg_split('/\s+/', trim(substr($stat, $end + 1)));
 
-        if ($fields === false || count($fields) < 20 || ! in_array($fields[0], ['R', 'S', 'D', 'T', 't', 'I'], true)) {
+        $states = $allowExited ? ['R', 'S', 'D', 'T', 't', 'I', 'Z', 'X', 'x'] : ['R', 'S', 'D', 'T', 't', 'I'];
+        if ($fields === false || count($fields) < 20 || ! in_array($fields[0], $states, true)) {
             return null;
         }
 

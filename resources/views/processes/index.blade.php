@@ -55,6 +55,9 @@
         .notice-success { background: #dcfce7; color: #166534; }
         .notice-error { background: #fee2e2; color: #991b1b; }
         .managed-table { min-width: 750px; }
+        .signal-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .signal-form button { padding: 6px 8px; border: 1px solid #94a3b8; border-radius: 4px; background: #fff; color: #182332; cursor: pointer; }
+        .signal-form button:disabled { color: #64748b; cursor: not-allowed; opacity: 0.6; }
     </style>
 </head>
 <body>
@@ -162,6 +165,7 @@
                             <th scope="col" class="numeric">UID</th>
                             <th scope="col">Estado registrado</th>
                             <th scope="col">Fecha/hora de creación</th>
+                            <th scope="col">Señales</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -173,10 +177,21 @@
                                 <td class="numeric">{{ $managedProcess->owner_uid }}</td>
                                 <td>{{ $managedProcess->status }}</td>
                                 <td>{{ $managedProcess->launched_at->format('Y-m-d H:i:s') }}</td>
+                                <td>
+                                    <div class="signal-actions">
+                                        @foreach ($allowedSignals as $signal => $definition)
+                                            <form class="signal-form" method="POST" action="{{ route('processes.test.signal', $managedProcess) }}">
+                                                @csrf
+                                                <input type="hidden" name="signal" value="{{ $signal }}">
+                                                <button type="submit" @disabled(! in_array($managedProcess->status, ['running', 'stopped'], true))>{{ $definition['label'] }}</button>
+                                            </form>
+                                        @endforeach
+                                    </div>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="empty">No hay procesos de prueba registrados.</td>
+                                <td colspan="7" class="empty">No hay procesos de prueba registrados.</td>
                             </tr>
                         @endforelse
                     </tbody>
