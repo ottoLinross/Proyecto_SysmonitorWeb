@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ManagedProcess extends Model
 {
+    protected $hidden = ['registration_signature'];
+
     protected $fillable = [
         'pid', 'process_type', 'command_label', 'owner_uid',
         'start_time_ticks', 'status', 'launched_at',

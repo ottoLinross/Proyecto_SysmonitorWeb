@@ -53,6 +53,9 @@ class TestProcessIdentityReaderTest extends TestCase
             'different command' => [['/proc/42/cmdline' => "/usr/bin/sleep\0"."600\0"]],
             'unreadable command' => [['/proc/42/cmdline' => null]],
             'PID reused between stat reads' => [['/proc/42/stat' => [self::stat('12345'), self::stat('67890')]]],
+            'forged argv but different executable' => [['/proc/42/exe' => '/usr/bin/bash']],
+            'unreadable executable' => [['/proc/42/exe' => null]],
+            'effective owner differs' => [['/proc/42/status' => "Uid:\t1000\t1001\t1000\t1000\n"]],
         ];
     }
 
@@ -143,6 +146,7 @@ class TestProcessIdentityReaderTest extends TestCase
             '/proc/42/stat' => self::stat('12345'),
             '/proc/42/status' => "Name:\tsleep\nUid:\t1000\t1000\t1000\t1000\n",
             '/proc/42/cmdline' => "/usr/bin/sleep\0"."300\0",
+            '/proc/42/exe' => '/usr/bin/sleep',
         ];
     }
 
@@ -170,6 +174,11 @@ class TestProcessIdentityReaderTest extends TestCase
             public function exists(int $pid): bool
             {
                 return array_key_exists('/proc/'.$pid.'/stat', $this->files);
+            }
+
+            protected function readExecutable(int $pid): ?string
+            {
+                return $this->files['/proc/'.$pid.'/exe'] ?? null;
             }
         };
     }

@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\ManagedProcess;
+use App\Services\System\ApplicationProcessUid;
+use App\Services\System\ManagedProcessProvenance;
 use App\Services\System\ProcessPriorityService;
 use App\Services\System\ProcessReniceRunner;
 use App\Services\System\ProcessService;
@@ -16,6 +18,14 @@ use Tests\TestCase;
 class ProcessPriorityTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->mock(ApplicationProcessUid::class, function (MockInterface $mock) {
+            $mock->shouldReceive('effectiveUid')->andReturn(1000);
+        });
+    }
 
     #[DataProvider('validValues')]
     public function test_valid_post_uses_registered_identity_and_verifies_nice(string $nice, int $exitCode): void
@@ -185,8 +195,11 @@ class ProcessPriorityTest extends TestCase
 
     private function record(string $status = 'running', int $pid = 42): ManagedProcess
     {
-        return ManagedProcess::create([...$this->identity(), 'pid' => $pid, 'status' => $status,
+        $process = ManagedProcess::create([...$this->identity(), 'pid' => $pid, 'status' => $status,
             'process_type' => 'sleep', 'command_label' => '/usr/bin/sleep 300', 'launched_at' => now()]);
+        $process->forceFill(['registration_signature' => app(ManagedProcessProvenance::class)->seal($process)])->save();
+
+        return $process;
     }
 
     private function mockGeneralProcesses(): void

@@ -13,17 +13,20 @@ class TestProcessIdentityReader
             throw new RuntimeException('No se pudo verificar el proceso de prueba.');
         }
 
-        $phpUid = $this->parseUid($this->readFile('/proc/self/status'));
+        $phpUid = $this->parseUid($this->readFile('/proc/self/status'), true);
 
         // nohup puede tardar brevemente en sustituirse por sleep después del fork.
         for ($attempt = 0; $attempt < 20; $attempt++) {
             $before = $this->parseStat($this->readFile('/proc/'.$pid.'/stat'), $pid);
-            $uid = $this->parseUid($this->readFile('/proc/'.$pid.'/status'));
+            $status = $this->readFile('/proc/'.$pid.'/status');
+            $uid = $this->parseUid($status);
+            $effectiveUid = $this->parseUid($status, true);
             $command = $this->readFile('/proc/'.$pid.'/cmdline');
+            $executable = $this->readExecutable($pid);
             $after = $this->parseStat($this->readFile('/proc/'.$pid.'/stat'), $pid);
 
-            if ($phpUid !== null && $uid === $phpUid && $before !== null && $before === $after
-                && $command === "/usr/bin/sleep\0"."300\0") {
+            if ($phpUid !== null && $uid === $phpUid && $effectiveUid === $phpUid && $before !== null && $before === $after
+                && $command === "/usr/bin/sleep\0"."300\0" && $executable === '/usr/bin/sleep') {
                 return ['pid' => $pid, 'owner_uid' => $uid, 'start_time_ticks' => $before];
             }
 
@@ -59,6 +62,13 @@ class TestProcessIdentityReader
         return $contents === false ? null : $contents;
     }
 
+    protected function readExecutable(int $pid): ?string
+    {
+        $executable = @readlink('/proc/'.$pid.'/exe');
+
+        return $executable === false ? null : $executable;
+    }
+
     public function exists(int $pid): bool
     {
         if ($pid <= 0) {
@@ -88,13 +98,13 @@ class TestProcessIdentityReader
             && $this->parseStat($stat, $pid, true) === $startTimeTicks;
     }
 
-    private function parseUid(?string $status): ?int
+    private function parseUid(?string $status, bool $effective = false): ?int
     {
-        if ($status === null || ! preg_match('/^Uid:\s+([0-9]+)\s+[0-9]+\s+[0-9]+\s+[0-9]+\s*$/m', $status, $matches)) {
+        if ($status === null || ! preg_match('/^Uid:\s+([0-9]+)\s+([0-9]+)\s+[0-9]+\s+[0-9]+\s*$/m', $status, $matches)) {
             return null;
         }
 
-        $uid = filter_var($matches[1], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+        $uid = filter_var($matches[$effective ? 2 : 1], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 4294967295]]);
 
         return $uid === false ? null : $uid;
     }

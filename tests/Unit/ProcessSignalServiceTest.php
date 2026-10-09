@@ -3,16 +3,18 @@
 namespace Tests\Unit;
 
 use App\Models\ManagedProcess;
-use App\Services\System\ManagedProcessIdentityGuard;
 use App\Services\System\ProcessSignalSender;
 use App\Services\System\ProcessSignalService;
 use App\Services\System\TestProcessIdentityReader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Tests\Support\ManagedProcessFixtures;
 
 class ProcessSignalServiceTest extends TestCase
 {
+    use ManagedProcessFixtures;
+
     #[DataProvider('allowedSignals')]
     public function test_valid_identity_allows_only_the_expected_signal_and_updates_status(string $signal, int $number, string $status): void
     {
@@ -226,12 +228,12 @@ class ProcessSignalServiceTest extends TestCase
         ]);
         $process->exists = true;
 
-        return $process;
+        return $this->sealFixture($process);
     }
 
     private function service(TestProcessIdentityReader $reader, ProcessSignalSender $sender): ProcessSignalService
     {
-        return new class($reader, $sender, new ManagedProcessIdentityGuard($reader)) extends ProcessSignalService
+        return new class($reader, $sender, $this->fixtureGuard($reader)) extends ProcessSignalService
         {
             protected function pause(): void {}
         };

@@ -143,7 +143,7 @@
         </section>
         <section class="test-processes" aria-labelledby="test-processes-title">
             <h2 id="test-processes-title">Procesos de prueba</h2>
-            <p>Inicia un proceso controlado de 300 segundos. Los registros muestran el estado guardado al crearlo.</p>
+            <p>Las acciones se limitan a procesos de prueba creados y registrados por SysMonitor. La identidad real se verifica antes de cada acción.</p>
             @if (session('test_process_success'))
                 <p class="notice notice-success" role="status">{{ session('test_process_success') }}</p>
             @endif
@@ -180,14 +180,14 @@
                                 <td class="command">{{ $managedProcess->command_label }}</td>
                                 <td class="numeric">{{ $managedProcess->owner_uid }}</td>
                                 <td>{{ $managedProcess->status }}</td>
-                                <td>{{ $managedProcess->launched_at->format('Y-m-d H:i:s') }}</td>
+                                <td>{{ $managedProcess->getRawOriginal('launched_at') }}</td>
                                 <td>
                                     <div class="signal-actions">
                                         @foreach ($allowedSignals as $signal => $definition)
                                             <form class="signal-form" method="POST" action="{{ route('processes.test.signal', $managedProcess) }}">
                                                 @csrf
                                                 <input type="hidden" name="signal" value="{{ $signal }}">
-                                                <button type="submit" @disabled(! in_array($managedProcess->status, ['running', 'stopped'], true))>{{ $definition['label'] }}</button>
+                                                <button type="submit" @disabled(! $managedProcessActions[$managedProcess->id])>{{ $definition['label'] }}</button>
                                             </form>
                                         @endforeach
                                     </div>
@@ -196,8 +196,8 @@
                                     <form class="priority-form" method="POST" action="{{ route('processes.test.priority', $managedProcess) }}">
                                         @csrf
                                         <label for="nice-{{ $managedProcess->id }}">Nuevo nice</label>
-                                        <input id="nice-{{ $managedProcess->id }}" type="number" name="nice" min="-20" max="19" step="1" required @disabled(! in_array($managedProcess->status, ['running', 'stopped'], true))>
-                                        <button type="submit" @disabled(! in_array($managedProcess->status, ['running', 'stopped'], true))>Cambiar prioridad</button>
+                                        <input id="nice-{{ $managedProcess->id }}" type="number" name="nice" min="-20" max="19" step="1" required @disabled(! $managedProcessActions[$managedProcess->id])>
+                                        <button type="submit" @disabled(! $managedProcessActions[$managedProcess->id])>Cambiar prioridad</button>
                                     </form>
                                 </td>
                             </tr>

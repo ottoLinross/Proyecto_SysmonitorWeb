@@ -3,16 +3,18 @@
 namespace Tests\Unit;
 
 use App\Models\ManagedProcess;
-use App\Services\System\ManagedProcessIdentityGuard;
 use App\Services\System\ProcessPriorityService;
 use App\Services\System\ProcessReniceRunner;
 use App\Services\System\TestProcessIdentityReader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Tests\Support\ManagedProcessFixtures;
 
 class ProcessPriorityServiceTest extends TestCase
 {
+    use ManagedProcessFixtures;
+
     #[DataProvider('validNiceValues')]
     public function test_valid_nice_is_applied_and_verified(mixed $value, int $expected): void
     {
@@ -210,11 +212,11 @@ class ProcessPriorityServiceTest extends TestCase
             'process_type' => 'sleep', 'command_label' => '/usr/bin/sleep 300']);
         $process->exists = true;
 
-        return $process;
+        return $this->sealFixture($process);
     }
 
     private function service(TestProcessIdentityReader $reader, ProcessReniceRunner $runner): ProcessPriorityService
     {
-        return new ProcessPriorityService(new ManagedProcessIdentityGuard($reader), $reader, $runner);
+        return new ProcessPriorityService($this->fixtureGuard($reader), $reader, $runner);
     }
 }

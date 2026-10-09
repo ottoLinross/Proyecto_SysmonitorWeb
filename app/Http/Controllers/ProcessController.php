@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ManagedProcess;
+use App\Services\System\ManagedProcessIdentityGuard;
 use App\Services\System\ProcessService;
 use App\Services\System\ProcessSignalService;
 use Illuminate\Http\Request;
@@ -33,7 +34,7 @@ class ProcessController extends Controller
         'T' => 'Detenidos',
     ];
 
-    public function index(Request $request, ProcessService $processService): View
+    public function index(Request $request, ProcessService $processService, ManagedProcessIdentityGuard $guard): View
     {
         $query = $request->query('q', '');
         $query = is_string($query) ? trim($query) : '';
@@ -98,6 +99,11 @@ class ProcessController extends Controller
             $managedProcessesUnavailable = true;
         }
 
+        $managedProcessActions = [];
+        foreach ($managedProcesses as $managedProcess) {
+            $managedProcessActions[$managedProcess->id] = $guard->canOfferActions($managedProcess);
+        }
+
         return view('processes.index', [
             'processes' => $processes,
             'q' => $query,
@@ -112,6 +118,7 @@ class ProcessController extends Controller
             'managedProcesses' => $managedProcesses,
             'managedProcessesUnavailable' => $managedProcessesUnavailable,
             'allowedSignals' => ProcessSignalService::SIGNALS,
+            'managedProcessActions' => $managedProcessActions,
         ]);
     }
 }

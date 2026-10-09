@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\ManagedProcess;
+use App\Services\System\ApplicationProcessUid;
+use App\Services\System\ManagedProcessProvenance;
 use App\Services\System\ProcessService;
 use App\Services\System\ProcessSignalSender;
 use App\Services\System\ProcessSignalService;
@@ -16,6 +18,14 @@ use Tests\TestCase;
 class ProcessSignalTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->mock(ApplicationProcessUid::class, function (MockInterface $mock) {
+            $mock->shouldReceive('effectiveUid')->andReturn(1000);
+        });
+    }
 
     #[DataProvider('signals')]
     public function test_post_sends_a_whitelisted_signal_using_the_bound_record(string $signal, int $number, string $status): void
@@ -200,9 +210,12 @@ class ProcessSignalTest extends TestCase
 
     private function record(string $status = 'running', int $pid = 42): ManagedProcess
     {
-        return ManagedProcess::create([
+        $process = ManagedProcess::create([
             ...$this->identity(), 'pid' => $pid, 'process_type' => 'sleep',
             'command_label' => '/usr/bin/sleep 300', 'status' => $status, 'launched_at' => now(),
         ]);
+        $process->forceFill(['registration_signature' => app(ManagedProcessProvenance::class)->seal($process)])->save();
+
+        return $process;
     }
 }

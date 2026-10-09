@@ -13,13 +13,15 @@ class TestProcessService
     public function __construct(
         private readonly TestProcessLauncher $launcher,
         private readonly TestProcessIdentityReader $identityReader,
+        private readonly ManagedProcessProvenance $provenance,
     ) {}
 
     public function launch(): ManagedProcess
     {
         try {
             // No lanzar un sleep si el registro todavía no está preparado.
-            if (! Schema::hasTable('managed_processes')) {
+            if (! Schema::hasTable('managed_processes') || ! Schema::hasColumn('managed_processes', 'registration_signature')
+                || ! $this->provenance->available()) {
                 throw new RuntimeException;
             }
 
@@ -40,15 +42,23 @@ class TestProcessService
                 throw new RuntimeException;
             }
 
-            return DB::transaction(fn (): ManagedProcess => ManagedProcess::create([
-                'pid' => $pid,
-                'process_type' => 'sleep',
-                'command_label' => '/usr/bin/sleep 300',
-                'owner_uid' => $identity['owner_uid'],
-                'start_time_ticks' => $identity['start_time_ticks'],
-                'status' => 'running',
-                'launched_at' => now(),
-            ]));
+            return DB::transaction(function () use ($pid, $identity): ManagedProcess {
+                $process = ManagedProcess::create([
+                    'pid' => $pid,
+                    'process_type' => 'sleep',
+                    'command_label' => '/usr/bin/sleep 300',
+                    'owner_uid' => $identity['owner_uid'],
+                    'start_time_ticks' => $identity['start_time_ticks'],
+                    'status' => 'running',
+                    'launched_at' => now(),
+                ]);
+                $process->forceFill(['registration_signature' => $this->provenance->seal($process)]);
+                if (! $process->save()) {
+                    throw new RuntimeException;
+                }
+
+                return $process;
+            });
         } catch (Throwable) {
             throw new RuntimeException('No se pudo crear el proceso de prueba.');
         }
