@@ -35,6 +35,23 @@ class TestProcessIdentityReader
         throw new RuntimeException('No se pudo verificar el proceso de prueba.');
     }
 
+    /** @return array{pid: int, owner_uid: int, start_time_ticks: int, nice: int} */
+    public function readWithNice(int $pid): array
+    {
+        $before = $this->read($pid);
+        $stat = $this->readFile('/proc/'.$pid.'/stat');
+        $fields = $this->statFields($stat, $pid);
+        $nice = $fields === null ? false : filter_var($fields[16], FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => -20, 'max_range' => 19]]);
+        $after = $this->read($pid);
+
+        if ($nice === false || $before !== $after || $this->parseStat($stat, $pid) !== $after['start_time_ticks']) {
+            throw new RuntimeException('No se pudo verificar el proceso de prueba.');
+        }
+
+        return [...$after, 'nice' => $nice];
+    }
+
     protected function readFile(string $path): ?string
     {
         $contents = @file_get_contents($path);
@@ -84,6 +101,19 @@ class TestProcessIdentityReader
 
     private function parseStat(?string $stat, int $pid, bool $allowExited = false): ?int
     {
+        $fields = $this->statFields($stat, $pid, $allowExited);
+        if ($fields === null) {
+            return null;
+        }
+
+        // fields[0] es el campo 3; fields[19] es starttime, campo 22.
+        $ticks = filter_var($fields[19], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+        return $ticks === false ? null : $ticks;
+    }
+
+    private function statFields(?string $stat, int $pid, bool $allowExited = false): ?array
+    {
         if ($stat === null || ! preg_match('/^([1-9][0-9]*) \(/', $stat, $matches)
             || (int) $matches[1] !== $pid || ($end = strrpos($stat, ')')) === false) {
             return null;
@@ -97,9 +127,6 @@ class TestProcessIdentityReader
             return null;
         }
 
-        // fields[0] es el campo 3; fields[19] es starttime, campo 22.
-        $ticks = filter_var($fields[19], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-
-        return $ticks === false ? null : $ticks;
+        return $fields;
     }
 }

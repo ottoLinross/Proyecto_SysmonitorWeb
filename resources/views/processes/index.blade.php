@@ -58,6 +58,9 @@
         .signal-actions { display: flex; flex-wrap: wrap; gap: 8px; }
         .signal-form button { padding: 6px 8px; border: 1px solid #94a3b8; border-radius: 4px; background: #fff; color: #182332; cursor: pointer; }
         .signal-form button:disabled { color: #64748b; cursor: not-allowed; opacity: 0.6; }
+        .priority-form { display: flex; align-items: center; gap: 8px; }
+        .priority-form input { width: 70px; padding: 6px; }
+        .priority-form button { padding: 6px 8px; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -166,6 +169,7 @@
                             <th scope="col">Estado registrado</th>
                             <th scope="col">Fecha/hora de creación</th>
                             <th scope="col">Señales</th>
+                            <th scope="col">Prioridad nice</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -188,10 +192,18 @@
                                         @endforeach
                                     </div>
                                 </td>
+                                <td>
+                                    <form class="priority-form" method="POST" action="{{ route('processes.test.priority', $managedProcess) }}">
+                                        @csrf
+                                        <label for="nice-{{ $managedProcess->id }}">Nuevo nice</label>
+                                        <input id="nice-{{ $managedProcess->id }}" type="number" name="nice" min="-20" max="19" step="1" required @disabled(! in_array($managedProcess->status, ['running', 'stopped'], true))>
+                                        <button type="submit" @disabled(! in_array($managedProcess->status, ['running', 'stopped'], true))>Cambiar prioridad</button>
+                                    </form>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="empty">No hay procesos de prueba registrados.</td>
+                                <td colspan="8" class="empty">No hay procesos de prueba registrados.</td>
                             </tr>
                         @endforelse
                     </tbody>

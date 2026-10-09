@@ -99,9 +99,41 @@ class TestProcessIdentityReaderTest extends TestCase
         $this->assertTrue($this->reader([])->hasExited(42, 12345));
     }
 
-    private static function stat(string $ticks, string $state = 'S', string $name = 'sleep'): string
+    public function test_nice_is_read_from_field_19_with_complex_comm(): void
     {
-        return '42 ('.$name.') '.implode(' ', [$state, ...array_fill(0, 18, '0'), $ticks]);
+        foreach (['-20', '19', '0'] as $nice) {
+            $files = $this->validFiles();
+            $files['/proc/42/stat'] = self::stat('12345', 'T', 'sleep ) worker (name)', $nice);
+
+            $this->assertSame([...['pid' => 42, 'owner_uid' => 1000, 'start_time_ticks' => 12345], 'nice' => (int) $nice],
+                $this->reader($files)->readWithNice(42));
+        }
+    }
+
+    public function test_invalid_nice_in_stat_is_rejected(): void
+    {
+        $files = $this->validFiles();
+        $files['/proc/42/stat'] = self::stat('12345', 'S', 'sleep', '10.5');
+        $this->expectException(RuntimeException::class);
+
+        $this->reader($files)->readWithNice(42);
+    }
+
+    public function test_identity_changes_during_nice_read_are_rejected(): void
+    {
+        $files = $this->validFiles();
+        $files['/proc/42/stat'] = [self::stat('12345'), self::stat('12345'), self::stat('67890'), self::stat('67890'), self::stat('67890')];
+        $this->expectException(RuntimeException::class);
+
+        $this->reader($files)->readWithNice(42);
+    }
+
+    private static function stat(string $ticks, string $state = 'S', string $name = 'sleep', string $nice = '0'): string
+    {
+        $fields = [$state, ...array_fill(0, 18, '0'), $ticks];
+        $fields[16] = $nice;
+
+        return '42 ('.$name.') '.implode(' ', $fields);
     }
 
     private function validFiles(): array

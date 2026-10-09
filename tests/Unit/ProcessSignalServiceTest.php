@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\ManagedProcess;
+use App\Services\System\ManagedProcessIdentityGuard;
 use App\Services\System\ProcessSignalSender;
 use App\Services\System\ProcessSignalService;
 use App\Services\System\TestProcessIdentityReader;
@@ -230,7 +231,7 @@ class ProcessSignalServiceTest extends TestCase
 
     private function service(TestProcessIdentityReader $reader, ProcessSignalSender $sender): ProcessSignalService
     {
-        return new class($reader, $sender) extends ProcessSignalService
+        return new class($reader, $sender, new ManagedProcessIdentityGuard($reader)) extends ProcessSignalService
         {
             protected function pause(): void {}
         };

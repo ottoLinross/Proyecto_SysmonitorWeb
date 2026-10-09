@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ManagedProcess;
+use App\Services\System\ProcessPriorityService;
 use App\Services\System\ProcessSignalService;
 use App\Services\System\TestProcessService;
 use Illuminate\Http\RedirectResponse;
@@ -11,6 +12,19 @@ use Throwable;
 
 class TestProcessController extends Controller
 {
+    public function priority(Request $request, ManagedProcess $managedProcess, ProcessPriorityService $service): RedirectResponse
+    {
+        try {
+            $result = $service->change($managedProcess, $request->input('nice'));
+        } catch (Throwable) {
+            return redirect()->route('processes.index')
+                ->with('test_process_error', 'No fue posible cambiar la prioridad del proceso.');
+        }
+
+        return redirect()->route('processes.index')
+            ->with($result['success'] ? 'test_process_success' : 'test_process_error', $result['message']);
+    }
+
     public function signal(Request $request, ManagedProcess $managedProcess, ProcessSignalService $service): RedirectResponse
     {
         $signal = $request->input('signal');
