@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\CpuMemoryController;
 use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\TestProcessController;
+use App\Services\System\CpuInfoService;
 use App\Services\System\ProcessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -28,13 +29,44 @@ class CpuMemoryTest extends TestCase
 
     public function test_cpu_memory_page_renders_the_initial_view(): void
     {
+        $info = [
+            'model' => 'Example CPU <script>alert(1)</script>',
+            'logical_processors' => 4,
+            'uptime_seconds' => 90061.25,
+            'uptime_formatted' => '1 día, 1 h, 1 min, 1 s',
+        ];
+        $this->mock(CpuInfoService::class, function (MockInterface $mock) use ($info) {
+            $mock->shouldReceive('getInfo')->once()->andReturn($info);
+        });
+
         $response = $this->get('/cpu-memoria');
 
         $response->assertOk();
         $response->assertViewIs('system.cpu-memory');
         $response->assertSeeText('CPU y Memoria');
-        $response->assertSeeText('Las métricas de CPU y memoria aún no están disponibles.');
+        $response->assertViewHas('cpuInfo', $info);
+        $response->assertSee(e($info['model']), false);
+        $response->assertDontSee($info['model'], false);
+        $response->assertSee('<dd>4</dd>', false);
+        $response->assertSeeText('90061.25');
+        $response->assertSeeText($info['uptime_formatted']);
         $response->assertSee('href="'.route('processes.index').'"', false);
+    }
+
+    public function test_cpu_memory_page_handles_unavailable_information(): void
+    {
+        $this->mock(CpuInfoService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('getInfo')->once()->andReturn([
+                'model' => null, 'logical_processors' => null,
+                'uptime_seconds' => null, 'uptime_formatted' => null,
+            ]);
+        });
+
+        $response = $this->get('/cpu-memoria');
+
+        $response->assertOk();
+        $response->assertViewIs('system.cpu-memory');
+        $this->assertSame(4, substr_count($response->getContent(), '<dd>No disponible</dd>'));
     }
 
     public function test_m1_processes_page_still_renders(): void
