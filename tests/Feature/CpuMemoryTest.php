@@ -6,6 +6,7 @@ use App\Http\Controllers\CpuMemoryController;
 use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\TestProcessController;
 use App\Services\System\CpuInfoService;
+use App\Services\System\CpuUsageService;
 use App\Services\System\ProcessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,15 @@ use Tests\TestCase;
 class CpuMemoryTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->mock(CpuUsageService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('getUsagePercent')->andReturn(42.5);
+        });
+    }
 
     public function test_cpu_memory_route_uses_the_dedicated_controller(): void
     {
@@ -45,6 +55,8 @@ class CpuMemoryTest extends TestCase
         $response->assertViewIs('system.cpu-memory');
         $response->assertSeeText('CPU y Memoria');
         $response->assertViewHas('cpuInfo', $info);
+        $response->assertViewHas('cpuUsagePercent', 42.5);
+        $response->assertSeeText('42.5 %');
         $response->assertSee(e($info['model']), false);
         $response->assertDontSee($info['model'], false);
         $response->assertSee('<dd>4</dd>', false);
@@ -55,6 +67,9 @@ class CpuMemoryTest extends TestCase
 
     public function test_cpu_memory_page_handles_unavailable_information(): void
     {
+        $this->mock(CpuUsageService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('getUsagePercent')->once()->andReturn(null);
+        });
         $this->mock(CpuInfoService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getInfo')->once()->andReturn([
                 'model' => null, 'logical_processors' => null,
@@ -66,7 +81,20 @@ class CpuMemoryTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('system.cpu-memory');
-        $this->assertSame(4, substr_count($response->getContent(), '<dd>No disponible</dd>'));
+        $this->assertSame(5, substr_count($response->getContent(), '<dd>No disponible</dd>'));
+    }
+
+    public function test_cpu_memory_page_displays_zero_usage_as_available(): void
+    {
+        $this->mock(CpuUsageService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('getUsagePercent')->once()->andReturn(0.0);
+        });
+
+        $response = $this->get('/cpu-memoria');
+
+        $response->assertOk();
+        $response->assertViewHas('cpuUsagePercent', 0.0);
+        $response->assertSeeText('0.0 %');
     }
 
     public function test_m1_processes_page_still_renders(): void

@@ -21,6 +21,8 @@
         <h1>CPU y Memoria</h1>
         <p class="description">Información básica de CPU y tiempo de actividad del sistema.</p>
         <dl>
+            <dt>Uso de CPU</dt>
+            <dd>{{ $cpuUsagePercent === null ? 'No disponible' : number_format($cpuUsagePercent, 1, '.', '').' %' }}</dd>
             <dt>Modelo de CPU</dt>
             <dd>{{ $cpuInfo['model'] ?? 'No disponible' }}</dd>
             <dt>Procesadores lógicos / vCPU</dt>
