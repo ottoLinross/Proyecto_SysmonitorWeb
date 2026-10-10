@@ -116,6 +116,19 @@ class ManagedProcessIdentityGuardTest extends TestCase
         $this->assertTrue($this->fixtureProvenance()->verify($process));
     }
 
+    public function test_malformed_persisted_text_is_rejected_without_internal_exceptions(): void
+    {
+        $process = $this->record();
+        $process->setRawAttributes([...$process->getAttributes(), 'launched_at' => "invalid\xFF"]);
+        $reader = $this->createMock(TestProcessIdentityReader::class);
+        $reader->expects($this->never())->method('read');
+        $guard = $this->fixtureGuard($reader);
+
+        $this->assertFalse($this->fixtureProvenance()->verify($process));
+        $this->assertFalse($guard->canOfferActions($process));
+        $this->assertFalse($guard->verify($process)['valid']);
+    }
+
     private function identity(): array
     {
         return ['pid' => 42, 'owner_uid' => 1000, 'start_time_ticks' => 12345];

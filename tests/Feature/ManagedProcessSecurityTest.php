@@ -155,6 +155,22 @@ class ManagedProcessSecurityTest extends TestCase
         $this->assertFalse($process->isFillable('registration_signature'));
     }
 
+    public function test_malformed_persisted_text_keeps_the_page_usable_and_disables_actions(): void
+    {
+        $process = $this->legitimateRecord();
+        ManagedProcess::query()->whereKey($process->id)->update(['launched_at' => "invalid\xFF"]);
+        $this->partialMock(ProcessService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('getProcesses')->once()->andReturn([]);
+        });
+
+        $response = $this->get('/procesos');
+
+        $response->assertOk();
+        $response->assertViewHas('managedProcessActions', [$process->id => false]);
+        $response->assertDontSeeText('JsonException');
+        $response->assertDontSeeText('Malformed UTF-8');
+    }
+
     public function test_legitimate_signal_transitions_preserve_registration_integrity(): void
     {
         $process = $this->legitimateRecord();

@@ -3,6 +3,7 @@
 namespace App\Services\System;
 
 use App\Models\ManagedProcess;
+use JsonException;
 use RuntimeException;
 
 class ManagedProcessProvenance
@@ -34,8 +35,13 @@ class ManagedProcessProvenance
     {
         $seal = $process->getAttributes()['registration_signature'] ?? null;
 
-        return $this->available() && is_string($seal) && preg_match('/^[a-f0-9]{64}$/D', $seal)
-            && hash_equals($this->seal($process), $seal);
+        try {
+            return $this->available() && is_string($seal) && preg_match('/^[a-f0-9]{64}$/D', $seal)
+                && hash_equals($this->seal($process), $seal);
+        } catch (JsonException) {
+            // Datos persistidos corruptos nunca convierten una verificación en un error de página.
+            return false;
+        }
     }
 
     private function signingKey(): string
