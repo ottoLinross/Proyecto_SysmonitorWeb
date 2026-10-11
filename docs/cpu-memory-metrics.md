@@ -3,6 +3,8 @@
 `GET /cpu-memoria/metricas` — nombre de ruta `cpu-memory.metrics`.
 Endpoint de solo lectura. No acepta parámetros para seleccionar archivos ni ejecutar acciones.
 Las respuestas son JSON con `Cache-Control: no-store`.
+Para uso, arquitectura, fuentes, fórmulas y pruebas, consultar
+[M2 — CPU y Memoria](M2_CPU_MEMORIA.md).
 
 ## Respuesta HTTP 200
 
@@ -20,6 +22,8 @@ Las respuestas son JSON con `Cache-Control: no-store`.
 - `timestamp`: string ISO 8601 en UTC, generado al completar la recolección.
 
 Una métrica no disponible se representa con `null`, conservando todas las claves.
+HTTP 200 con `status=ok` puede contener métricas parcialmente indisponibles;
+no significa que todos los archivos se hayan leído correctamente.
 Los rankings sin datos son listas vacías. Cero es un valor válido, incluida swap deshabilitada.
 Cada ranking se ordena por consumo descendente y por PID ascendente en empates.
 Ambos usan una sola lectura de ProcessService de M1. El porcentaje por proceso
@@ -43,6 +47,11 @@ Una excepción durante la recolección o serialización produce únicamente:
 ```
 
 No se incluyen rutas internas, comandos, mensajes de excepción ni stack traces.
+
+La ruta acepta GET y su HEAD implícito; otros métodos no están registrados.
+El panel HTML controla excepciones por servicio y conserva las secciones
+disponibles con un aviso genérico, sin cambiar este contrato JSON.
+
 ## Actualización del panel (Paso 9)
 
 La página HTML `GET /cpu-memoria` conserva el renderizado inicial de Blade,
