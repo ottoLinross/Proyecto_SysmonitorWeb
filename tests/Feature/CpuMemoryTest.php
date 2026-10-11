@@ -28,6 +28,9 @@ class CpuMemoryTest extends TestCase
         $this->mock(MemoryService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getInfo')->andReturn(null);
         });
+        $this->partialMock(ProcessService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('getProcesses')->andReturn([]);
+        });
     }
 
     public function test_cpu_memory_route_uses_the_dedicated_controller(): void
@@ -155,6 +158,51 @@ class CpuMemoryTest extends TestCase
         $response->assertOk();
         $response->assertViewIs('processes.index');
         $response->assertSeeText('Módulo de Procesos');
+    }
+
+    public function test_both_rankings_reuse_one_process_read_and_escape_commands(): void
+    {
+        $processes = [];
+        foreach ([3, 1, 6, 2, 5, 4] as $pid) {
+            $processes[] = [
+                'pid' => $pid, 'command' => 'process '.$pid.' <script>alert(1)</script>',
+                'cpu_percent' => $pid * 25.0, 'memory_percent' => 7.0 - $pid,
+            ];
+        }
+        $this->mock(ProcessService::class, function (MockInterface $mock) use ($processes) {
+            $mock->shouldReceive('getProcesses')->once()->andReturn($processes);
+        });
+
+        $response = $this->get('/cpu-memoria');
+
+        $response->assertOk();
+        $response->assertViewHas('topCpuProcesses', fn (array $rows): bool => array_column($rows, 'pid') === [6, 5, 4, 3, 2]);
+        $response->assertViewHas('topMemoryProcesses', fn (array $rows): bool => array_column($rows, 'pid') === [1, 2, 3, 4, 5]);
+        $response->assertSeeText('Top 5 procesos por CPU');
+        $response->assertSeeText('Top 5 procesos por memoria');
+        $response->assertDontSee('<script>alert(1)</script>', false);
+
+        foreach (['top-cpu' => [6, 5, 4, 3, 2], 'top-memory' => [1, 2, 3, 4, 5]] as $id => $expectedPids) {
+            $this->assertSame(1, preg_match('/<table id="'.$id.'">(.*?)<\/table>/s', $response->getContent(), $matches));
+            preg_match_all('/<td class="command">process (\d+) /', $matches[1], $rows);
+            $this->assertSame($expectedPids, array_map('intval', $rows[1]));
+            $this->assertStringContainsString(e('<script>alert(1)</script>'), $matches[1]);
+            $this->assertStringContainsString($id === 'top-cpu' ? '150.0 %' : '6.0 %', $matches[1]);
+        }
+    }
+
+    public function test_empty_process_list_shows_both_empty_rankings(): void
+    {
+        $this->mock(ProcessService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('getProcesses')->once()->andReturn([]);
+        });
+
+        $response = $this->get('/cpu-memoria');
+
+        $response->assertOk();
+        $response->assertViewHas('topCpuProcesses', []);
+        $response->assertViewHas('topMemoryProcesses', []);
+        $this->assertSame(2, substr_count($response->getContent(), 'No hay procesos disponibles para mostrar.'));
     }
 
     public function test_m1_routes_keep_their_names_methods_and_controllers(): void

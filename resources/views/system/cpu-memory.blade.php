@@ -14,6 +14,13 @@
         dt { font-weight: 600; }
         dd { margin: 8px 0 16px; overflow-wrap: anywhere; }
         a { color: #1d4ed8; }
+        .table-container { overflow-x: auto; margin-bottom: 24px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+        table { width: 100%; border-spacing: 0; }
+        caption { padding: 16px; text-align: left; font-weight: 600; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #eaf0f6; }
+        .numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .command { overflow-wrap: anywhere; white-space: pre-wrap; font-family: ui-monospace, monospace; }
     </style>
 </head>
 <body>
@@ -53,6 +60,34 @@
                 <dd>{{ isset($memoryInfo[$key]) ? number_format($memoryInfo[$key] / 1048576, 2, '.', '').' MiB' : 'No disponible' }}</dd>
             @endforeach
         </dl>
+        @foreach ([
+            ['id' => 'top-cpu', 'title' => 'Top 5 procesos por CPU', 'metric' => 'cpu_percent', 'label' => 'CPU %', 'processes' => $topCpuProcesses],
+            ['id' => 'top-memory', 'title' => 'Top 5 procesos por memoria', 'metric' => 'memory_percent', 'label' => 'Memoria %', 'processes' => $topMemoryProcesses],
+        ] as $ranking)
+            <div class="table-container">
+                <table id="{{ $ranking['id'] }}">
+                    <caption>{{ $ranking['title'] }}</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">PID</th>
+                            <th scope="col">Comando</th>
+                            <th scope="col" class="numeric">{{ $ranking['label'] }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($ranking['processes'] as $process)
+                            <tr>
+                                <td class="numeric">{{ $process['pid'] }}</td>
+                                <td class="command">{{ $process['command'] }}</td>
+                                <td class="numeric">{{ number_format($process[$ranking['metric']], 1, '.', '') }} %</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="3">No hay procesos disponibles para mostrar.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        @endforeach
         <a href="{{ route('processes.index') }}">Ver procesos</a>
     </main>
 </body>
