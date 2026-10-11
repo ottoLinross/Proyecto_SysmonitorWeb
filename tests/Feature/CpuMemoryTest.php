@@ -44,6 +44,62 @@ class CpuMemoryTest extends TestCase
         $this->assertSame('/cpu-memoria', route('cpu-memory.index', [], false));
     }
 
+    public function test_panel_renders_the_main_sections_and_metric_labels(): void
+    {
+        $response = $this->get('/cpu-memoria');
+
+        $response->assertOk();
+        $response->assertViewIs('system.cpu-memory');
+        $response->assertSee('<html lang="es">', false);
+        $response->assertSee('<meta name="viewport" content="width=device-width, initial-scale=1">', false);
+        $response->assertSee('<h1>CPU y Memoria</h1>', false);
+        $response->assertSeeText('SysMonitor');
+        foreach ([
+            'cpu-info-title' => 'Información de CPU y uptime',
+            'cpu-load-title' => 'Uso de CPU y carga promedio',
+            'memory-title' => 'Memoria', 'swap-title' => 'Swap',
+            'rankings-title' => 'Procesos con mayor consumo',
+        ] as $id => $heading) {
+            $response->assertSee('<section aria-labelledby="'.$id.'">', false);
+            $response->assertSee('<h2 id="'.$id.'">'.$heading.'</h2>', false);
+        }
+        foreach ([
+            'Modelo de CPU', 'Procesadores lógicos / vCPU', 'Tiempo de actividad', 'Uptime en segundos',
+            'Uso de CPU', 'Carga promedio (1 minuto)', 'Carga promedio (5 minutos)', 'Carga promedio (15 minutos)',
+            'Memoria total', 'Memoria usada', 'Memoria libre', 'Memoria en caché', 'Swap total', 'Swap usada', 'Swap libre',
+        ] as $label) {
+            $response->assertSee('<dt>'.$label.'</dt>', false);
+        }
+        foreach (['top-cpu' => 'Top 5 procesos por CPU', 'top-memory' => 'Top 5 procesos por memoria'] as $id => $caption) {
+            $response->assertSee('<caption id="'.$id.'-caption">'.$caption.'</caption>', false);
+            $response->assertSee('role="region" aria-labelledby="'.$id.'-caption" tabindex="0"', false);
+        }
+        $response->assertSee('<th scope="col">PID</th>', false);
+        $response->assertSee('<th scope="col">Comando</th>', false);
+        $response->assertSeeText('CPU %');
+        $response->assertSeeText('Memoria %');
+    }
+
+    public function test_panel_escapes_model_and_formatted_uptime(): void
+    {
+        $model = '<img src=x onerror="alert(1)">';
+        $uptime = '<script>alert("uptime")</script>';
+        $this->mock(CpuInfoService::class, function (MockInterface $mock) use ($model, $uptime) {
+            $mock->shouldReceive('getInfo')->once()->andReturn([
+                'model' => $model, 'logical_processors' => 4,
+                'uptime_seconds' => 60.25, 'uptime_formatted' => $uptime, 'load_average' => null,
+            ]);
+        });
+
+        $response = $this->get('/cpu-memoria');
+
+        $response->assertOk();
+        foreach ([$model, $uptime] as $value) {
+            $response->assertSee(e($value), false);
+            $response->assertDontSee($value, false);
+        }
+    }
+
     public function test_cpu_memory_page_renders_the_initial_view(): void
     {
         $info = [
