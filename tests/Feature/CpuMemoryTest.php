@@ -8,10 +8,13 @@ use App\Http\Controllers\TestProcessController;
 use App\Services\System\CpuInfoService;
 use App\Services\System\CpuUsageService;
 use App\Services\System\MemoryService;
+use App\Services\System\ProcessRankingService;
 use App\Services\System\ProcessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Tests\TestCase;
 
 class CpuMemoryTest extends TestCase
@@ -42,6 +45,38 @@ class CpuMemoryTest extends TestCase
         $this->assertSame(['GET', 'HEAD'], $route->methods());
         $this->assertSame(CpuMemoryController::class.'@index', $route->getActionName());
         $this->assertSame('/cpu-memoria', route('cpu-memory.index', [], false));
+    }
+
+    #[DataProvider('unavailableServices')]
+    public function test_page_handles_service_exceptions_without_exposing_details(string $service, string $method): void
+    {
+        config(['app.debug' => true]);
+        $this->mock($service, function (MockInterface $mock) use ($method) {
+            $mock->shouldReceive($method)->once()->andThrow(new RuntimeException('/proc/internal private-marker'));
+        });
+
+        $response = $this->get('/cpu-memoria');
+
+        $response->assertOk();
+        $response->assertViewIs('system.cpu-memory');
+        $response->assertViewHas('metricsUnavailable', true);
+        $response->assertSeeText('Algunas métricas no están disponibles temporalmente.');
+        $response->assertDontSee('/proc/internal', false);
+        $response->assertDontSee('private-marker', false);
+        if ($service !== CpuUsageService::class) {
+            $response->assertSeeText('42.5 %');
+        }
+    }
+
+    public static function unavailableServices(): array
+    {
+        return [
+            'cpu info' => [CpuInfoService::class, 'getInfo'],
+            'cpu usage' => [CpuUsageService::class, 'getUsagePercent'],
+            'memory' => [MemoryService::class, 'getInfo'],
+            'processes' => [ProcessService::class, 'getProcesses'],
+            'rankings' => [ProcessRankingService::class, 'getRankings'],
+        ];
     }
 
     public function test_panel_renders_the_main_sections_and_metric_labels(): void

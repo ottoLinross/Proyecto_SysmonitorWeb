@@ -170,4 +170,21 @@ class CpuMemoryMetricsTest extends TestCase
             'rankings' => [ProcessRankingService::class, 'getRankings'],
         ];
     }
+
+    public function test_serialization_failure_returns_only_the_controlled_error(): void
+    {
+        config(['app.debug' => true]);
+        $info = self::CPU_INFO;
+        $info['model'] = "invalid encoding \xFF /internal/private-marker";
+        $this->mock(CpuInfoService::class, fn (MockInterface $mock) => $mock->shouldReceive('getInfo')->once()->andReturn($info));
+
+        $response = $this->getJson('/cpu-memoria/metricas');
+
+        $response->assertStatus(503)->assertExactJson([
+            'status' => 'error',
+            'error' => ['code' => 'metrics_unavailable', 'message' => 'No se pudieron obtener las métricas del sistema.'],
+            'timestamp' => now()->utc()->toIso8601String(),
+        ]);
+        $response->assertDontSee('private-marker', false);
+    }
 }

@@ -27,6 +27,8 @@ class CpuInfoServiceTest extends TestCase
             'incomplete' => ["processor\nmodel name\ncpu cores: 4", null, null],
             'empty' => ['', null, null],
             'whitespace' => [" \n\t", null, null],
+            'processor overflow' => ['processor: '.str_repeat('9', 40), null, null],
+            'invalid model encoding' => ["processor: 0\nmodel name: \xFF", null, 1],
         ];
     }
 

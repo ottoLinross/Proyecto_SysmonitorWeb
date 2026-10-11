@@ -30,7 +30,7 @@ class MemoryService
         $values = [];
 
         foreach (explode("\n", $content) as $line) {
-            $key = trim(explode(':', $line, 2)[0]);
+            $key = preg_split('/[:\s]/', trim($line), 2)[0];
 
             if (! in_array($key, self::KEYS, true)) {
                 continue;

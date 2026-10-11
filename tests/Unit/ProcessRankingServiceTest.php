@@ -56,4 +56,25 @@ class ProcessRankingServiceTest extends TestCase
     {
         return ['empty' => [0], 'single' => [1], 'less than five' => [3], 'exactly five' => [5]];
     }
+
+    public function test_invalid_rows_duplicates_and_metrics_do_not_break_independent_rankings(): void
+    {
+        $rows = [
+            null, 'invalid', [],
+            ['pid' => 0, 'command' => 'invalid', 'cpu_percent' => 1.0, 'memory_percent' => 1.0],
+            ['pid' => 1, 'command' => '', 'cpu_percent' => 1.0, 'memory_percent' => 1.0],
+            ['pid' => 2, 'command' => 'valid CPU', 'cpu_percent' => 150.0, 'memory_percent' => INF],
+            ['pid' => 3, 'command' => 'valid memory', 'cpu_percent' => NAN, 'memory_percent' => 10.0],
+            ['pid' => 4, 'command' => 'invalid', 'cpu_percent' => -1.0, 'memory_percent' => 101.0],
+            ['pid' => 5, 'command' => 'invalid', 'cpu_percent' => '1.0', 'memory_percent' => -1.0],
+            ['pid' => 6, 'command' => 'valid', 'cpu_percent' => 2.0, 'memory_percent' => 5.0],
+            ['pid' => 6, 'command' => 'duplicate', 'cpu_percent' => 3.0, 'memory_percent' => 6.0],
+        ];
+
+        $rankings = (new ProcessRankingService)->getRankings($rows);
+
+        $this->assertSame([2, 6], array_column($rankings['cpu'], 'pid'));
+        $this->assertSame([3, 6], array_column($rankings['memory'], 'pid'));
+        $this->assertSame('valid', $rankings['cpu'][1]['command']);
+    }
 }

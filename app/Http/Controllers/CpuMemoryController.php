@@ -83,12 +83,29 @@ class CpuMemoryController extends Controller
         ProcessService $processService,
         ProcessRankingService $processRankingService,
     ): View {
-        $rankings = $processRankingService->getRankings($processService->getProcesses());
+        $metricsUnavailable = false;
+        $read = function (callable $operation, mixed $fallback) use (&$metricsUnavailable): mixed {
+            try {
+                return $operation();
+            } catch (Throwable) {
+                $metricsUnavailable = true;
+
+                return $fallback;
+            }
+        };
+        $cpuInfo = $read(fn () => $cpuInfoService->getInfo(), [
+            'model' => null, 'logical_processors' => null, 'uptime_seconds' => null,
+            'uptime_formatted' => null, 'load_average' => null,
+        ]);
+        $cpuUsage = $read(fn () => $cpuUsageService->getUsagePercent(), null);
+        $memory = $read(fn () => $memoryService->getInfo(), null);
+        $rankings = $read(fn () => $processRankingService->getRankings($processService->getProcesses()), ['cpu' => [], 'memory' => []]);
 
         return view('system.cpu-memory', [
-            'cpuInfo' => $cpuInfoService->getInfo(),
-            'cpuUsagePercent' => $cpuUsageService->getUsagePercent(),
-            'memoryInfo' => $memoryService->getInfo(),
+            'cpuInfo' => $cpuInfo,
+            'cpuUsagePercent' => $cpuUsage,
+            'memoryInfo' => $memory,
+            'metricsUnavailable' => $metricsUnavailable,
             'topCpuProcesses' => $rankings['cpu'],
             'topMemoryProcesses' => $rankings['memory'],
         ]);

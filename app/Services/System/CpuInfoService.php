@@ -69,12 +69,15 @@ class CpuInfoService
 
             [$key, $value] = array_map('trim', $fields);
 
-            if ($key === 'model name' && $value !== '' && $model === null) {
+            if ($key === 'model name' && $value !== '' && $model === null && preg_match('//u', $value) === 1) {
                 $model = $value;
             }
 
             if ($key === 'processor' && preg_match('/^[0-9]+$/D', $value)) {
-                $processors[ltrim($value, '0') ?: '0'] = true;
+                $id = filter_var(ltrim($value, '0') ?: '0', FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+                if ($id !== false) {
+                    $processors[$id] = true;
+                }
             }
         }
 

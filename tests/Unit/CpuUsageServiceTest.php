@@ -37,6 +37,8 @@ class CpuUsageServiceTest extends TestCase
             'decimal' => ['cpu 1.5 2 3 4 5 6 7 8'],
             'exponent' => ['cpu 1e3 2 3 4 5 6 7 8'],
             'overflow' => ['cpu '.str_repeat('9', 40).' 2 3 4 5 6 7 8'],
+            'corrupt guest' => ['cpu 1 2 3 4 5 6 7 8 invalid 0'],
+            'negative guest' => ['cpu 1 2 3 4 5 6 7 8 -1 0'],
         ];
     }
 

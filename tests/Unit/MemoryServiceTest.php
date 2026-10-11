@@ -70,6 +70,8 @@ class MemoryServiceTest extends TestCase
             'duplicate' => [self::BASE.'MemFree: 100 kB'],
             'overflow' => [self::BASE.'Cached: '.PHP_INT_MAX.' kB'],
             'extra data' => [self::BASE.'Cached: 10 kB invalid'],
+            'optional key without colon' => [self::BASE.'Cached 10 kB'],
+            'available without colon' => [self::BASE.'MemAvailable 600 kB'],
         ];
     }
 

@@ -67,7 +67,7 @@
         </header>
 
         <div class="refresh-state">
-            <p id="metrics-status" role="status" aria-live="polite" aria-atomic="true">Datos iniciales del servidor.</p>
+            <p id="metrics-status" role="status" aria-live="polite" aria-atomic="true">{{ $metricsUnavailable ? 'Algunas métricas no están disponibles temporalmente.' : 'Datos iniciales del servidor.' }}</p>
             <p>Última lectura correcta: <time id="metrics-last-read">No disponible</time></p>
             <noscript>JavaScript está deshabilitado. Se muestran los valores al cargar la página.</noscript>
         </div>

@@ -42,6 +42,14 @@ class CpuUsageService
 
         $snapshot = [];
 
+        // Los campos adicionales no se suman, pero tampoco deben ocultar una línea corrupta.
+        foreach (array_slice($columns, 9) as $value) {
+            if (! preg_match('/^[0-9]+$/D', $value)
+                || filter_var(ltrim($value, '0') ?: '0', FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]) === false) {
+                return null;
+            }
+        }
+
         foreach (self::FIELDS as $index => $field) {
             $value = $columns[$index + 1];
 
