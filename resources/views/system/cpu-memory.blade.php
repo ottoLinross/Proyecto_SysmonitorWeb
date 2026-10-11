@@ -15,6 +15,9 @@
         h1 { margin: 0 0 12px; font-size: 1.8rem; }
         h2 { margin: 0 0 16px; font-size: 1.2rem; }
         .description { margin: 0; color: #526173; line-height: 1.5; }
+        .refresh-state { margin-bottom: 24px; color: #526173; font-size: 0.9rem; }
+        .refresh-state p { margin: 0 0 8px; }
+        #metrics-status[data-state="error"] { color: #991b1b; }
         section { min-width: 0; margin-bottom: 24px; }
         .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 12px; margin: 0; }
         .metric-card { min-width: 0; padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
@@ -41,36 +44,42 @@
     </style>
 </head>
 <body>
-    <main>
+    <main id="cpu-memory-panel" data-metrics-url="{{ route('cpu-memory.metrics', [], false) }}">
         <header class="page-header">
             <div>
                 <p class="brand">SysMonitor</p>
                 <h1>CPU y Memoria</h1>
-                <p class="description">Estado del sistema al cargar esta página.</p>
+                <p class="description">Estado de CPU, memoria y procesos del sistema.</p>
             </div>
             <nav aria-label="Navegación de módulos">
                 <a href="{{ route('processes.index') }}">Ver procesos</a>
             </nav>
         </header>
 
+        <div class="refresh-state">
+            <p id="metrics-status" role="status" aria-live="polite" aria-atomic="true">Datos iniciales del servidor.</p>
+            <p>Última lectura correcta: <time id="metrics-last-read">No disponible</time></p>
+            <noscript>JavaScript está deshabilitado. Se muestran los valores al cargar la página.</noscript>
+        </div>
+
         <section aria-labelledby="cpu-info-title">
             <h2 id="cpu-info-title">Información de CPU y uptime</h2>
             <dl class="metric-grid">
                 <div class="metric-card">
                     <dt>Modelo de CPU</dt>
-                    <dd>{{ $cpuInfo['model'] ?? 'No disponible' }}</dd>
+                    <dd data-metric="cpu.model" data-format="text">{{ $cpuInfo['model'] ?? 'No disponible' }}</dd>
                 </div>
                 <div class="metric-card">
                     <dt>Procesadores lógicos / vCPU</dt>
-                    <dd>{{ $cpuInfo['logical_processors'] ?? 'No disponible' }}</dd>
+                    <dd data-metric="cpu.logical_processors" data-format="integer">{{ $cpuInfo['logical_processors'] ?? 'No disponible' }}</dd>
                 </div>
                 <div class="metric-card">
                     <dt>Tiempo de actividad</dt>
-                    <dd>{{ $cpuInfo['uptime_formatted'] ?? 'No disponible' }}</dd>
+                    <dd data-metric="uptime.formatted" data-format="text">{{ $cpuInfo['uptime_formatted'] ?? 'No disponible' }}</dd>
                 </div>
                 <div class="metric-card">
                     <dt>Uptime en segundos</dt>
-                    <dd>{{ $cpuInfo['uptime_seconds'] ?? 'No disponible' }}</dd>
+                    <dd data-metric="uptime.seconds" data-format="number">{{ $cpuInfo['uptime_seconds'] ?? 'No disponible' }}</dd>
                 </div>
             </dl>
         </section>
@@ -80,12 +89,12 @@
             <dl class="metric-grid">
                 <div class="metric-card cpu-usage">
                     <dt>Uso de CPU</dt>
-                    <dd>{{ $cpuUsagePercent === null ? 'No disponible' : number_format($cpuUsagePercent, 1, '.', '').' %' }}</dd>
+                    <dd data-metric="cpu.usage_percent" data-format="percent">{{ $cpuUsagePercent === null ? 'No disponible' : number_format($cpuUsagePercent, 1, '.', '').' %' }}</dd>
                 </div>
                 @foreach (['one_minute' => 'Carga promedio (1 minuto)', 'five_minutes' => 'Carga promedio (5 minutos)', 'fifteen_minutes' => 'Carga promedio (15 minutos)'] as $key => $label)
                     <div class="metric-card">
                         <dt>{{ $label }}</dt>
-                        <dd>{{ isset($cpuInfo['load_average'][$key]) ? number_format($cpuInfo['load_average'][$key], 2, '.', '') : 'No disponible' }}</dd>
+                        <dd data-metric="load_average.{{ $key }}" data-format="load">{{ isset($cpuInfo['load_average'][$key]) ? number_format($cpuInfo['load_average'][$key], 2, '.', '') : 'No disponible' }}</dd>
                     </div>
                 @endforeach
             </dl>
@@ -98,7 +107,7 @@
                     @foreach (['memory_total_bytes' => 'Memoria total', 'memory_used_bytes' => 'Memoria usada', 'memory_free_bytes' => 'Memoria libre', 'memory_cached_bytes' => 'Memoria en caché'] as $key => $label)
                         <div class="metric-card">
                             <dt>{{ $label }}</dt>
-                            <dd>{{ isset($memoryInfo[$key]) ? number_format($memoryInfo[$key] / 1048576, 2, '.', '').' MiB' : 'No disponible' }}</dd>
+                            <dd data-metric="{{ str_replace(['memory_', 'swap_'], ['memory.', 'swap.'], $key) }}" data-format="bytes">{{ isset($memoryInfo[$key]) ? number_format($memoryInfo[$key] / 1048576, 2, '.', '').' MiB' : 'No disponible' }}</dd>
                         </div>
                     @endforeach
                 </dl>
@@ -109,7 +118,7 @@
                     @foreach (['swap_total_bytes' => 'Swap total', 'swap_used_bytes' => 'Swap usada', 'swap_free_bytes' => 'Swap libre'] as $key => $label)
                         <div class="metric-card">
                             <dt>{{ $label }}</dt>
-                            <dd>{{ isset($memoryInfo[$key]) ? number_format($memoryInfo[$key] / 1048576, 2, '.', '').' MiB' : 'No disponible' }}</dd>
+                            <dd data-metric="{{ str_replace(['memory_', 'swap_'], ['memory.', 'swap.'], $key) }}" data-format="bytes">{{ isset($memoryInfo[$key]) ? number_format($memoryInfo[$key] / 1048576, 2, '.', '').' MiB' : 'No disponible' }}</dd>
                         </div>
                     @endforeach
                 </dl>
@@ -133,7 +142,7 @@
                                     <th scope="col" class="numeric">{{ $ranking['label'] }}</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody data-ranking="{{ $ranking['metric'] === 'cpu_percent' ? 'cpu' : 'memory' }}">
                                 @forelse ($ranking['processes'] as $process)
                                     <tr>
                                         <td class="numeric">{{ $process['pid'] }}</td>
@@ -150,5 +159,6 @@
             </div>
         </section>
     </main>
+    <script src="{{ asset('js/cpu-memory.js') }}" defer></script>
 </body>
 </html>

@@ -43,4 +43,21 @@ Una excepción durante la recolección o serialización produce únicamente:
 ```
 
 No se incluyen rutas internas, comandos, mensajes de excepción ni stack traces.
-La página HTML `GET /cpu-memoria` conserva su comportamiento actual.
+## Actualización del panel (Paso 9)
+
+La página HTML `GET /cpu-memoria` conserva el renderizado inicial de Blade,
+incluidos los comandos escapados de los rankings. Funciona sin JavaScript.
+Con JavaScript, se consulta este endpoint cinco segundos después de cargar y
+cinco segundos después de terminar cada petición. Nunca hay consultas concurrentes;
+una petición que supera diez segundos se cancela y después se reintenta.
+
+La interfaz valida la respuesta antes de reemplazar valores, actualiza con
+`textContent` y APIs DOM y conserva la última lectura válida ante errores HTTP,
+de red, de JSON o de estructura. El estado se anuncia mediante una región accesible
+y la hora correcta se obtiene del timestamp del servidor, mostrada en hora local
+del navegador. Los temporizadores se cancelan al salir de la página.
+
+Los rankings dinámicos muestran PID y porcentaje; la columna Comando pasa a
+“No disponible”, porque el contrato no entrega comandos. No se reutilizan comandos
+antiguos para PIDs que pueden haberse reutilizado. No hay historial, gráficas,
+almacenamiento persistente ni llamadas a otros endpoints.

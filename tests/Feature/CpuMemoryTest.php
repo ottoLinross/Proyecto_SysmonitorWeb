@@ -80,6 +80,31 @@ class CpuMemoryTest extends TestCase
         $response->assertSeeText('Memoria %');
     }
 
+    public function test_panel_includes_refresh_targets_and_keeps_server_rendered_content(): void
+    {
+        $response = $this->get('/cpu-memoria');
+
+        $response->assertOk();
+        $response->assertSee('data-metrics-url="'.route('cpu-memory.metrics', [], false).'"', false);
+        $response->assertSee('<script src="'.asset('js/cpu-memory.js').'" defer></script>', false);
+        $response->assertSee('id="metrics-status" role="status" aria-live="polite" aria-atomic="true"', false);
+        $response->assertSee('<time id="metrics-last-read">No disponible</time>', false);
+        $response->assertSeeText('JavaScript está deshabilitado. Se muestran los valores al cargar la página.');
+        foreach ([
+            'cpu.model', 'cpu.logical_processors', 'cpu.usage_percent', 'uptime.seconds', 'uptime.formatted',
+            'load_average.one_minute', 'load_average.five_minutes', 'load_average.fifteen_minutes',
+            'memory.total_bytes', 'memory.used_bytes', 'memory.free_bytes', 'memory.cached_bytes',
+            'swap.total_bytes', 'swap.used_bytes', 'swap.free_bytes',
+        ] as $metric) {
+            $response->assertSee('data-metric="'.$metric.'"', false);
+        }
+        $response->assertSee('<tbody data-ranking="cpu">', false);
+        $response->assertSee('<tbody data-ranking="memory">', false);
+        $response->assertSeeText('42.5 %');
+        $response->assertSeeText('Top 5 procesos por CPU');
+        $response->assertSeeText('Top 5 procesos por memoria');
+    }
+
     public function test_panel_escapes_model_and_formatted_uptime(): void
     {
         $model = '<img src=x onerror="alert(1)">';
@@ -124,7 +149,7 @@ class CpuMemoryTest extends TestCase
         $response->assertSeeTextInOrder(['Carga promedio (1 minuto)', '1.25', 'Carga promedio (5 minutos)', '2.50', 'Carga promedio (15 minutos)', '3.75']);
         $response->assertSee(e($info['model']), false);
         $response->assertDontSee($info['model'], false);
-        $response->assertSee('<dd>4</dd>', false);
+        $response->assertSee('<dd data-metric="cpu.logical_processors" data-format="integer">4</dd>', false);
         $response->assertSeeText('90061.25');
         $response->assertSeeText($info['uptime_formatted']);
         $response->assertSee('href="'.route('processes.index').'"', false);
@@ -147,7 +172,7 @@ class CpuMemoryTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('system.cpu-memory');
-        $this->assertSame(15, substr_count($response->getContent(), '<dd>No disponible</dd>'));
+        $this->assertSame(15, substr_count($response->getContent(), '>No disponible</dd>'));
     }
 
     public function test_memory_and_disabled_swap_are_displayed_in_mib(): void
@@ -187,7 +212,7 @@ class CpuMemoryTest extends TestCase
         $response = $this->get('/cpu-memoria');
 
         $response->assertOk();
-        $this->assertSame(3, substr_count($response->getContent(), '<dd>0.00</dd>'));
+        $this->assertSame(3, substr_count($response->getContent(), '>0.00</dd>'));
     }
 
     public function test_cpu_memory_page_displays_zero_usage_as_available(): void
