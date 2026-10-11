@@ -7,6 +7,7 @@ use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\TestProcessController;
 use App\Services\System\CpuInfoService;
 use App\Services\System\CpuUsageService;
+use App\Services\System\MemoryService;
 use App\Services\System\ProcessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,9 @@ class CpuMemoryTest extends TestCase
 
         $this->mock(CpuUsageService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getUsagePercent')->andReturn(42.5);
+        });
+        $this->mock(MemoryService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('getInfo')->andReturn(null);
         });
     }
 
@@ -84,7 +88,31 @@ class CpuMemoryTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('system.cpu-memory');
-        $this->assertSame(8, substr_count($response->getContent(), '<dd>No disponible</dd>'));
+        $this->assertSame(15, substr_count($response->getContent(), '<dd>No disponible</dd>'));
+    }
+
+    public function test_memory_and_disabled_swap_are_displayed_in_mib(): void
+    {
+        $info = [
+            'memory_total_bytes' => 1048576,
+            'memory_used_bytes' => 524288,
+            'memory_free_bytes' => 262144,
+            'memory_cached_bytes' => 131072,
+            'swap_total_bytes' => 0, 'swap_used_bytes' => 0, 'swap_free_bytes' => 0,
+        ];
+        $this->mock(MemoryService::class, function (MockInterface $mock) use ($info) {
+            $mock->shouldReceive('getInfo')->once()->andReturn($info);
+        });
+
+        $response = $this->get('/cpu-memoria');
+
+        $response->assertOk();
+        $response->assertViewHas('memoryInfo', $info);
+        $response->assertSeeTextInOrder([
+            'Memoria total', '1.00 MiB', 'Memoria usada', '0.50 MiB',
+            'Memoria libre', '0.25 MiB', 'Memoria en caché', '0.13 MiB',
+            'Swap total', '0.00 MiB', 'Swap usada', '0.00 MiB', 'Swap libre', '0.00 MiB',
+        ]);
     }
 
     public function test_zero_load_average_is_displayed_as_available(): void

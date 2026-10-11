@@ -38,6 +38,21 @@
             <dt>Tiempo de actividad</dt>
             <dd>{{ $cpuInfo['uptime_formatted'] ?? 'No disponible' }}</dd>
         </dl>
+        <h2>Memoria y swap</h2>
+        <dl>
+            @foreach ([
+                'memory_total_bytes' => 'Memoria total',
+                'memory_used_bytes' => 'Memoria usada',
+                'memory_free_bytes' => 'Memoria libre',
+                'memory_cached_bytes' => 'Memoria en caché',
+                'swap_total_bytes' => 'Swap total',
+                'swap_used_bytes' => 'Swap usada',
+                'swap_free_bytes' => 'Swap libre',
+            ] as $key => $label)
+                <dt>{{ $label }}</dt>
+                <dd>{{ isset($memoryInfo[$key]) ? number_format($memoryInfo[$key] / 1048576, 2, '.', '').' MiB' : 'No disponible' }}</dd>
+            @endforeach
+        </dl>
         <a href="{{ route('processes.index') }}">Ver procesos</a>
     </main>
 </body>
