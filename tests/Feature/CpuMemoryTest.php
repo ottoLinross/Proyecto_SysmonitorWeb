@@ -44,6 +44,7 @@ class CpuMemoryTest extends TestCase
             'logical_processors' => 4,
             'uptime_seconds' => 90061.25,
             'uptime_formatted' => '1 día, 1 h, 1 min, 1 s',
+            'load_average' => ['one_minute' => 1.25, 'five_minutes' => 2.5, 'fifteen_minutes' => 3.75],
         ];
         $this->mock(CpuInfoService::class, function (MockInterface $mock) use ($info) {
             $mock->shouldReceive('getInfo')->once()->andReturn($info);
@@ -57,6 +58,7 @@ class CpuMemoryTest extends TestCase
         $response->assertViewHas('cpuInfo', $info);
         $response->assertViewHas('cpuUsagePercent', 42.5);
         $response->assertSeeText('42.5 %');
+        $response->assertSeeTextInOrder(['Carga promedio (1 minuto)', '1.25', 'Carga promedio (5 minutos)', '2.50', 'Carga promedio (15 minutos)', '3.75']);
         $response->assertSee(e($info['model']), false);
         $response->assertDontSee($info['model'], false);
         $response->assertSee('<dd>4</dd>', false);
@@ -74,6 +76,7 @@ class CpuMemoryTest extends TestCase
             $mock->shouldReceive('getInfo')->once()->andReturn([
                 'model' => null, 'logical_processors' => null,
                 'uptime_seconds' => null, 'uptime_formatted' => null,
+                'load_average' => null,
             ]);
         });
 
@@ -81,7 +84,23 @@ class CpuMemoryTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('system.cpu-memory');
-        $this->assertSame(5, substr_count($response->getContent(), '<dd>No disponible</dd>'));
+        $this->assertSame(8, substr_count($response->getContent(), '<dd>No disponible</dd>'));
+    }
+
+    public function test_zero_load_average_is_displayed_as_available(): void
+    {
+        $this->mock(CpuInfoService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('getInfo')->once()->andReturn([
+                'model' => null, 'logical_processors' => null,
+                'uptime_seconds' => null, 'uptime_formatted' => null,
+                'load_average' => ['one_minute' => 0.0, 'five_minutes' => 0.0, 'fifteen_minutes' => 0.0],
+            ]);
+        });
+
+        $response = $this->get('/cpu-memoria');
+
+        $response->assertOk();
+        $this->assertSame(3, substr_count($response->getContent(), '<dd>0.00</dd>'));
     }
 
     public function test_cpu_memory_page_displays_zero_usage_as_available(): void

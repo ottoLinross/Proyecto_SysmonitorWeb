@@ -62,25 +62,76 @@ class CpuInfoServiceTest extends TestCase
 
     public function test_read_failures_return_unavailable_values(): void
     {
-        $service = $this->getMockBuilder(CpuInfoService::class)->onlyMethods(['readCpuInfo', 'readUptime'])->getMock();
+        $service = $this->getMockBuilder(CpuInfoService::class)->onlyMethods(['readCpuInfo', 'readUptime', 'readLoadAverage'])->getMock();
         $service->expects($this->once())->method('readCpuInfo')->willReturn(null);
         $service->expects($this->once())->method('readUptime')->willReturn(null);
+        $service->expects($this->once())->method('readLoadAverage')->willReturn(null);
 
         $this->assertSame([
             'model' => null, 'logical_processors' => null,
             'uptime_seconds' => null, 'uptime_formatted' => null,
+            'load_average' => null,
         ], $service->getInfo());
     }
 
     public function test_get_info_combines_simulated_readings(): void
     {
-        $service = $this->getMockBuilder(CpuInfoService::class)->onlyMethods(['readCpuInfo', 'readUptime'])->getMock();
+        $service = $this->getMockBuilder(CpuInfoService::class)->onlyMethods(['readCpuInfo', 'readUptime', 'readLoadAverage'])->getMock();
         $service->expects($this->once())->method('readCpuInfo')->willReturn("processor: 0\nmodel name: Example CPU");
         $service->expects($this->once())->method('readUptime')->willReturn('60.25 120.50');
+        $service->expects($this->once())->method('readLoadAverage')->willReturn('1.25 2.50 3.75 1/100 123');
 
         $this->assertSame([
             'model' => 'Example CPU', 'logical_processors' => 1,
             'uptime_seconds' => 60.25, 'uptime_formatted' => '0 días, 0 h, 1 min, 0 s',
+            'load_average' => ['one_minute' => 1.25, 'five_minutes' => 2.5, 'fifteen_minutes' => 3.75],
         ], $service->getInfo());
+    }
+
+    #[DataProvider('loadAverageCases')]
+    public function test_it_parses_load_average(string $content, ?array $expected): void
+    {
+        $this->assertSame($expected, (new CpuInfoService)->parseLoadAverage($content));
+    }
+
+    public static function loadAverageCases(): array
+    {
+        $valid = ['one_minute' => 1.25, 'five_minutes' => 2.5, 'fifteen_minutes' => 3.75];
+
+        return [
+            'full file' => ["1.25 2.50 3.75 1/100 123\n", $valid],
+            'three fields' => ['1.25 2.50 3.75', $valid],
+            'unexpected whitespace' => [" \t1.25\t 2.50\r\n3.75   1/100 123\n", $valid],
+            'zero' => ['0.00 0 0.0', ['one_minute' => 0.0, 'five_minutes' => 0.0, 'fifteen_minutes' => 0.0]],
+            'loads above cpu count' => ['200 150 100', ['one_minute' => 200.0, 'five_minutes' => 150.0, 'fifteen_minutes' => 100.0]],
+            'empty' => ['', null],
+            'whitespace' => [" \t\n", null],
+            'one field' => ['1.25', null],
+            'two fields' => ['1.25 2.50', null],
+            'invalid first' => ['invalid 2.50 3.75', null],
+            'invalid second' => ['1.25 invalid 3.75', null],
+            'invalid third' => ['1.25 2.50 invalid', null],
+            'negative' => ['-1 2 3', null],
+            'exponent' => ['1e2 2 3', null],
+            'comma' => ['1,25 2 3', null],
+            'infinity' => ['INF 2 3', null],
+            'not a number' => ['NaN 2 3', null],
+            'overflow' => ['1 2 '.str_repeat('9', 400), null],
+        ];
+    }
+
+    public function test_invalid_load_average_does_not_hide_cpu_or_uptime(): void
+    {
+        $service = $this->getMockBuilder(CpuInfoService::class)->onlyMethods(['readCpuInfo', 'readUptime', 'readLoadAverage'])->getMock();
+        $service->expects($this->once())->method('readCpuInfo')->willReturn("processor: 0\nmodel name: Example CPU");
+        $service->expects($this->once())->method('readUptime')->willReturn('60.25 120.50');
+        $service->expects($this->once())->method('readLoadAverage')->willReturn('corrupt');
+
+        $info = $service->getInfo();
+
+        $this->assertNull($info['load_average']);
+        $this->assertSame('Example CPU', $info['model']);
+        $this->assertSame(1, $info['logical_processors']);
+        $this->assertSame(60.25, $info['uptime_seconds']);
     }
 }

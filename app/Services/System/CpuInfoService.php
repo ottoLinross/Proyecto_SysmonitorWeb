@@ -10,15 +10,46 @@ class CpuInfoService
 
     private const UPTIME_PATH = '/proc/uptime';
 
+    private const LOADAVG_PATH = '/proc/loadavg';
+
     /**
-     * @return array{model: ?string, logical_processors: ?int, uptime_seconds: ?float, uptime_formatted: ?string}
+     * @return array{model: ?string, logical_processors: ?int, uptime_seconds: ?float, uptime_formatted: ?string, load_average: ?array{one_minute: float, five_minutes: float, fifteen_minutes: float}}
      */
     public function getInfo(): array
     {
         $cpu = $this->parseCpuInfo($this->readCpuInfo() ?? '');
         $uptime = $this->parseUptime($this->readUptime() ?? '');
 
-        return array_merge($cpu, $uptime);
+        return array_merge($cpu, $uptime, [
+            'load_average' => $this->parseLoadAverage($this->readLoadAverage() ?? ''),
+        ]);
+    }
+
+    /**
+     * Solo los tres primeros campos representan las cargas solicitadas.
+     *
+     * @return array{one_minute: float, five_minutes: float, fifteen_minutes: float}|null
+     */
+    public function parseLoadAverage(string $content): ?array
+    {
+        $fields = preg_split('/\s+/', trim($content));
+
+        if ($fields === false || count($fields) < 3) {
+            return null;
+        }
+
+        $loads = [];
+        foreach (['one_minute', 'five_minutes', 'fifteen_minutes'] as $index => $key) {
+            $value = $fields[$index];
+
+            if (! preg_match('/^[0-9]+(?:\.[0-9]+)?$/D', $value) || ! is_finite((float) $value)) {
+                return null;
+            }
+
+            $loads[$key] = (float) $value;
+        }
+
+        return $loads;
     }
 
     /**
@@ -97,6 +128,17 @@ class CpuInfoService
     {
         try {
             $content = @file_get_contents(self::UPTIME_PATH);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $content === false ? null : $content;
+    }
+
+    protected function readLoadAverage(): ?string
+    {
+        try {
+            $content = @file_get_contents(self::LOADAVG_PATH);
         } catch (Throwable) {
             return null;
         }

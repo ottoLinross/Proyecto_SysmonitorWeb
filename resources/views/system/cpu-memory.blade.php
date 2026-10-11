@@ -23,6 +23,12 @@
         <dl>
             <dt>Uso de CPU</dt>
             <dd>{{ $cpuUsagePercent === null ? 'No disponible' : number_format($cpuUsagePercent, 1, '.', '').' %' }}</dd>
+            <dt>Carga promedio (1 minuto)</dt>
+            <dd>{{ isset($cpuInfo['load_average']['one_minute']) ? number_format($cpuInfo['load_average']['one_minute'], 2, '.', '') : 'No disponible' }}</dd>
+            <dt>Carga promedio (5 minutos)</dt>
+            <dd>{{ isset($cpuInfo['load_average']['five_minutes']) ? number_format($cpuInfo['load_average']['five_minutes'], 2, '.', '') : 'No disponible' }}</dd>
+            <dt>Carga promedio (15 minutos)</dt>
+            <dd>{{ isset($cpuInfo['load_average']['fifteen_minutes']) ? number_format($cpuInfo['load_average']['fifteen_minutes'], 2, '.', '') : 'No disponible' }}</dd>
             <dt>Modelo de CPU</dt>
             <dd>{{ $cpuInfo['model'] ?? 'No disponible' }}</dd>
             <dt>Procesadores lógicos / vCPU</dt>
