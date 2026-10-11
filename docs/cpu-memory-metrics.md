@@ -59,5 +59,26 @@ del navegador. Los temporizadores se cancelan al salir de la página.
 
 Los rankings dinámicos muestran PID y porcentaje; la columna Comando pasa a
 “No disponible”, porque el contrato no entrega comandos. No se reutilizan comandos
-antiguos para PIDs que pueden haberse reutilizado. No hay historial, gráficas,
-almacenamiento persistente ni llamadas a otros endpoints.
+antiguos para PIDs que pueden haberse reutilizado. No hay almacenamiento
+persistente ni llamadas a otros endpoints.
+
+## Gráficas del panel (Paso 10)
+
+Dos SVG nativos usan las mismas respuestas correctas del ciclo de fetch.
+El historial compartido conserva hasta 60 lecturas en memoria del navegador;
+desaparece al recargar y no utiliza almacenamiento persistente. Se registra
+CPU global y memoria utilizada como `100 * used_bytes / total_bytes`.
+No se calcula memoria con total cero, valores ausentes, no finitos o usada
+mayor que total. Las series se mantienen entre 0 y 100 %.
+
+Solo se registran timestamps válidos y posteriores al último; sin timestamp
+o sin ninguna de las dos métricas válidas no se añade una muestra. Una serie
+no disponible deja un hueco cuando la otra sí tiene un dato correcto.
+Los errores de consulta conservan el historial. El eje horizontal usa tiempos
+reales del servidor y muestra al menos un minuto, ampliándose al intervalo
+de las muestras retenidas. El eje vertical siempre es 0–100 %.
+
+Cada SVG contiene como máximo 60 puntos y un trazado dinámicos, sin acumular
+nodos. Hay títulos y descripciones accesibles, además de una alternativa
+textual visible con las últimas cinco lecturas de cada serie. Sin JavaScript
+permanecen las tarjetas y rankings iniciales del servidor.

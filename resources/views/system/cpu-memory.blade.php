@@ -37,6 +37,16 @@
         .numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .command { overflow-wrap: anywhere; white-space: pre-wrap; font-family: ui-monospace, monospace; }
         .empty { padding: 24px 16px; text-align: center; color: #526173; }
+        .chart-card { min-width: 0; margin: 0; padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+        .chart-card figcaption { margin-bottom: 8px; font-weight: 600; }
+        .chart-card svg { display: block; width: 100%; height: auto; }
+        .chart-grid { stroke: #e2e8f0; stroke-width: 1; }
+        .chart-axis { fill: #526173; font-size: 14px; }
+        .chart-line { fill: none; stroke: #1d4ed8; stroke-width: 2; }
+        .chart-point { fill: #1d4ed8; }
+        .chart-memory .chart-line { stroke: #166534; }
+        .chart-memory .chart-point { fill: #166534; }
+        .chart-recent { margin: 12px 0 0; color: #526173; font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }
         @media (max-width: 800px) {
             .panel-grid { grid-template-columns: minmax(0, 1fr); }
             main { padding: 24px 16px; }
@@ -124,6 +134,37 @@
                 </dl>
             </section>
         </div>
+
+        <section aria-labelledby="charts-title">
+            <h2 id="charts-title">CPU y memoria en el tiempo</h2>
+            <p class="description">Hasta 60 lecturas recientes. Escala de 0 a 100 %, con horas locales.</p>
+            <div class="panel-grid">
+                @foreach (['cpu' => 'Uso de CPU', 'memory' => 'Memoria utilizada'] as $kind => $title)
+                    <figure class="chart-card chart-{{ $kind }}">
+                        <figcaption>{{ $title }} (%)</figcaption>
+                        <svg viewBox="0 0 640 235" role="img" aria-labelledby="{{ $kind }}-chart-title {{ $kind }}-chart-description" aria-describedby="{{ $kind }}-chart-recent">
+                            <title id="{{ $kind }}-chart-title">{{ $title }} en el tiempo</title>
+                            <desc id="{{ $kind }}-chart-description">Lecturas correctas del panel. Eje vertical de 0 a 100 %. Eje horizontal con horas locales; los datos no disponibles dejan huecos.</desc>
+                            <g class="chart-grid" aria-hidden="true">
+                                <line x1="50" y1="20" x2="590" y2="20" />
+                                <line x1="50" y1="100" x2="590" y2="100" />
+                                <line x1="50" y1="180" x2="590" y2="180" />
+                            </g>
+                            <g class="chart-axis" aria-hidden="true">
+                                <text x="44" y="25" text-anchor="end">100 %</text>
+                                <text x="44" y="105" text-anchor="end">50 %</text>
+                                <text x="44" y="185" text-anchor="end">0 %</text>
+                                <text id="{{ $kind }}-chart-start" x="50" y="210">—</text>
+                                <text id="{{ $kind }}-chart-end" x="590" y="210" text-anchor="end">—</text>
+                            </g>
+                            <g id="{{ $kind }}-chart-plot" aria-hidden="true"></g>
+                        </svg>
+                        <p id="{{ $kind }}-chart-recent" class="chart-recent">Sin muestras todavía. Las lecturas aparecerán al actualizar el panel.</p>
+                    </figure>
+                @endforeach
+            </div>
+            <noscript>Las gráficas requieren JavaScript; las métricas actuales se muestran en las tarjetas.</noscript>
+        </section>
 
         <section aria-labelledby="rankings-title">
             <h2 id="rankings-title">Procesos con mayor consumo</h2>

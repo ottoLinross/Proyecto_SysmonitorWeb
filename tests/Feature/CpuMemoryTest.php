@@ -125,6 +125,23 @@ class CpuMemoryTest extends TestCase
         }
     }
 
+    public function test_panel_renders_accessible_svg_charts_and_text_alternatives(): void
+    {
+        $response = $this->get('/cpu-memoria');
+
+        $response->assertOk();
+        $response->assertSee('<h2 id="charts-title">CPU y memoria en el tiempo</h2>', false);
+        foreach (['cpu', 'memory'] as $kind) {
+            $response->assertSee('viewBox="0 0 640 235" role="img" aria-labelledby="'.$kind.'-chart-title '.$kind.'-chart-description" aria-describedby="'.$kind.'-chart-recent"', false);
+            $response->assertSee('<g id="'.$kind.'-chart-plot" aria-hidden="true"></g>', false);
+            $response->assertSee('id="'.$kind.'-chart-recent"', false);
+        }
+        $response->assertSeeText('100 %');
+        $response->assertSeeText('50 %');
+        $response->assertSeeText('0 %');
+        $response->assertSeeText('Las gráficas requieren JavaScript; las métricas actuales se muestran en las tarjetas.');
+    }
+
     public function test_cpu_memory_page_renders_the_initial_view(): void
     {
         $info = [

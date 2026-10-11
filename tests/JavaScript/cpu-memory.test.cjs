@@ -6,7 +6,8 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../../public/js/cpu-memory.js'), 'utf8');
 
 class Element {
-    constructor() { this.dataset = {}; this.children = []; this.textContent = ''; }
+    constructor() { this.dataset = {}; this.children = []; this.textContent = ''; this.attributes = {}; }
+    setAttribute(name, value) { this.attributes[name] = value; }
     append(child) { this.children.push(child); }
     replaceChildren(fragment) { this.children = fragment.children; }
     removeAttribute(name) { if (name === 'datetime') delete this.dateTime; }
@@ -40,12 +41,17 @@ function harness() {
     const panel = new Element(); panel.dataset.metricsUrl = '/cpu-memoria/metricas';
     panel.querySelectorAll = selector => selector === '[data-metric]' ? values : tables;
     const status = new Element(); const lastRead = new Element(); lastRead.textContent = 'No disponible';
+    const charts = {};
+    for (const kind of ['cpu', 'memory']) {
+        for (const part of ['plot', 'start', 'end', 'recent']) charts[`${kind}-chart-${part}`] = new Element();
+    }
     const timers = new Map(); const listeners = {}; const calls = []; let nextId = 0;
     const state = { respond: async () => ({ ok: true, json: async () => payload() }) };
     vm.runInNewContext(source, {
         document: {
-            getElementById: id => ({ 'cpu-memory-panel': panel, 'metrics-status': status, 'metrics-last-read': lastRead })[id],
+            getElementById: id => ({ 'cpu-memory-panel': panel, 'metrics-status': status, 'metrics-last-read': lastRead, ...charts })[id],
             createElement: () => new Element(), createDocumentFragment: () => new Element(),
+            createElementNS: (namespace, name) => { const element = new Element(); element.tagName = name; return element; },
         },
         window: { addEventListener: (event, callback) => { listeners[event] = callback; } },
         AbortController,
@@ -57,7 +63,7 @@ function harness() {
         const entry = [...timers].find(([, timer]) => timer.delay === delay);
         assert.ok(entry, `Timer ${delay} exists`); timers.delete(entry[0]); return entry[1].callback();
     }
-    return { values, tables, status, lastRead, timers, listeners, calls, state, trigger,
+    return { values, tables, status, lastRead, charts, timers, listeners, calls, state, trigger,
         value: key => values.find(element => element.dataset.metric === key).textContent };
 }
 
@@ -160,4 +166,104 @@ test('returning before an aborted request settles never duplicates polling timer
     h.listeners.pagehide(); h.listeners.pageshow({ persisted: true }); await pending;
     assert.equal(h.timers.size, 1);
     assert.equal([...h.timers.values()][0].delay, 5000);
+});
+
+test('charts use the existing successful fetch and compute memory percentage from bytes', async () => {
+    const h = harness(); await h.trigger(5000);
+    assert.equal(h.calls.length, 1);
+    const cpu = h.charts['cpu-chart-plot'].children.find(element => element.tagName === 'circle');
+    const memory = h.charts['memory-chart-plot'].children.find(element => element.tagName === 'circle');
+    assert.equal(cpu.attributes.cx, '590.00'); assert.equal(cpu.attributes.cy, '112.00');
+    assert.equal(memory.attributes.cy, '100.00');
+    assert.match(h.charts['cpu-chart-recent'].textContent, /42\.5 %/);
+    assert.match(h.charts['memory-chart-recent'].textContent, /50\.0 %/);
+});
+
+test('history and SVG nodes remain bounded after ninety successful fetches', async () => {
+    const h = harness();
+    for (let index = 0; index < 90; index++) {
+        const data = payload(); data.timestamp = new Date(Date.UTC(2026, 9, 10, 12) + index * 5000).toISOString();
+        data.cpu.usage_percent = index;
+        h.state.respond = async () => ({ ok: true, json: async () => data }); await h.trigger(5000);
+    }
+    for (const kind of ['cpu', 'memory']) {
+        const nodes = h.charts[`${kind}-chart-plot`].children;
+        assert.equal(nodes.filter(element => element.tagName === 'circle').length, 60);
+        assert.equal(nodes.length, 61);
+        assert.equal(h.charts[`${kind}-chart-recent`].textContent.split('; ').length, 5);
+    }
+    const first = h.charts['cpu-chart-plot'].children[0];
+    assert.equal(first.attributes.cx, '50.00'); assert.equal(first.attributes.cy, '132.00');
+    assert.equal(h.calls.length, 90); assert.equal(h.timers.size, 1);
+});
+
+test('failed requests and invalid JSON keep the existing chart history', async () => {
+    const h = harness(); await h.trigger(5000);
+    const nodes = h.charts['cpu-chart-plot'].children;
+    const recent = h.charts['cpu-chart-recent'].textContent;
+    for (const respond of [
+        async () => ({ ok: false }), async () => { throw new Error('network'); },
+        async () => ({ ok: true, json: async () => { throw new SyntaxError('json'); } }),
+        async () => ({ ok: true, json: async () => ({ ...payload(), timestamp: 'invalid' }) }),
+        async () => ({ ok: true, json: async () => ({ ...payload(), cpu: { usage_percent: Infinity } }) }),
+    ]) {
+        h.state.respond = respond; await h.trigger(5000);
+        assert.equal(h.charts['cpu-chart-plot'].children, nodes);
+        assert.equal(h.charts['cpu-chart-recent'].textContent, recent);
+    }
+});
+
+test('zero total, missing or null memory and absent CPU never produce invalid samples', async () => {
+    const h = harness(); await h.trigger(5000);
+    const nodes = h.charts['memory-chart-plot'].children;
+    for (const memory of [
+        { total_bytes: 0, used_bytes: 0 }, { total_bytes: null, used_bytes: null }, {},
+        { total_bytes: 100, used_bytes: 101 },
+    ]) {
+        const data = payload(); data.memory = memory; data.cpu.usage_percent = null;
+        data.timestamp = '2026-10-10T12:01:00+00:00';
+        h.state.respond = async () => ({ ok: true, json: async () => data }); await h.trigger(5000);
+        assert.equal(h.status.dataset.state, 'ok'); assert.equal(h.charts['memory-chart-plot'].children, nodes);
+    }
+});
+
+test('valid CPU still plots while unavailable memory leaves a break in its line', async () => {
+    const h = harness();
+    for (let index = 0; index < 3; index++) {
+        const data = payload(); data.timestamp = new Date(Date.UTC(2026, 9, 10, 12) + index * 5000).toISOString();
+        if (index === 1) data.memory.total_bytes = 0;
+        h.state.respond = async () => ({ ok: true, json: async () => data }); await h.trigger(5000);
+    }
+    const cpuNodes = h.charts['cpu-chart-plot'].children;
+    const memoryNodes = h.charts['memory-chart-plot'].children;
+    assert.equal(cpuNodes.filter(element => element.tagName === 'circle').length, 3);
+    assert.equal(memoryNodes.filter(element => element.tagName === 'circle').length, 2);
+    const path = memoryNodes.find(element => element.tagName === 'path').attributes.d;
+    assert.equal((path.match(/M/g) || []).length, 2); assert.equal(path.includes('L'), false);
+    assert.match(h.charts['memory-chart-recent'].textContent, /No disponible/);
+    assert.equal(/NaN|Infinity/.test(path), false);
+});
+
+test('zero and one hundred percent fit the vertical axis for both series', async () => {
+    const h = harness();
+    for (const percent of [0, 100]) {
+        const data = payload(); data.cpu.usage_percent = percent;
+        data.memory.total_bytes = 100; data.memory.used_bytes = percent;
+        data.timestamp = new Date(Date.UTC(2026, 9, 10, 12) + percent * 1000).toISOString();
+        h.state.respond = async () => ({ ok: true, json: async () => data }); await h.trigger(5000);
+    }
+    for (const kind of ['cpu', 'memory']) {
+        const circles = h.charts[`${kind}-chart-plot`].children.filter(element => element.tagName === 'circle');
+        assert.equal(circles[0].attributes.cy, '180.00'); assert.equal(circles[1].attributes.cy, '20.00');
+    }
+});
+
+test('missing, repeated and out-of-order timestamps do not invent or duplicate history', async () => {
+    const h = harness(); await h.trigger(5000);
+    const nodes = h.charts['cpu-chart-plot'].children;
+    for (const timestamp of [null, '2026-10-10T12:00:00+00:00', '2026-10-10T11:59:00+00:00']) {
+        const data = payload(); data.timestamp = timestamp;
+        h.state.respond = async () => ({ ok: true, json: async () => data }); await h.trigger(5000);
+        assert.equal(h.charts['cpu-chart-plot'].children, nodes);
+    }
 });
