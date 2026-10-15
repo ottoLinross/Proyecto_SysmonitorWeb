@@ -80,5 +80,35 @@ hay procesos listos, añade `idle` hasta la próxima llegada. Combina intervalos
 contiguos del mismo proceso, sin ocultar interrupciones reales, sin segmentos de
 duración cero ni ocio final. Un lote vacío devuelve una lista vacía.
 
-Este paso añade solo el motor SRTF y sus pruebas: no implementa Round Robin,
-integración visual, métricas, Gantt, persistencia ni comparación global.
+El motor SRTF no modifica formularios ni rutas, no calcula métricas ni compara
+algoritmos.
+
+## Round Robin
+
+`RoundRobinScheduler::schedule(array $processes, mixed $quantum)` es PHP puro.
+Recibe procesos previamente validados por `ProcessInput` y un quantum configurable
+que debe ser un entero PHP mayor que cero. Rechaza cero, negativos, flotantes,
+booleanos, cadenas y otros tipos con `InvalidArgumentException`, incluso si el
+lote está vacío. No limita superiormente el quantum: ejecuta como máximo el
+burst restante antes de sumar el tiempo, también con `PHP_INT_MAX`.
+
+Utiliza la cola FIFO nativa `SplQueue`, sin dependencias nuevas. Las llegadas se
+ordenan por tiempo y, en empate, por posición original. Ni ID ni prioridad
+alteran el orden. Si no hay procesos listos, emite `idle` hasta la próxima
+llegada. Cada turno ejecuta `min(quantum, remaining)` sin interrupciones por
+nuevas llegadas; al terminar un proceso no consume el quantum sobrante.
+
+Regla de frontera: al terminar cada turno, incorpora todas las llegadas con
+`arrival_time <= fin`, incluidas las llegadas exactamente en ese instante,
+antes de reencolar al proceso actual si aún tiene tiempo restante. Los procesos
+que ya esperaban conservan su lugar delante de las nuevas llegadas.
+
+Devuelve el mismo formato de intervalos `[inicio, fin)` de los otros motores.
+Combina turnos contiguos del mismo proceso sin ocultar alternancias reales;
+por eso un intervalo combinado puede durar más que un quantum. No genera
+intervalos de duración cero ni ocio final. El lote vacío devuelve `[]` con
+quantum válido. No modifica la entrada ni conserva estado entre simulaciones.
+
+Este paso solo añade el motor Round Robin, documentación y pruebas. No modifica
+los algoritmos anteriores, formularios o rutas, ni implementa planificación por
+prioridades, métricas, Gantt, persistencia o comparación global.
