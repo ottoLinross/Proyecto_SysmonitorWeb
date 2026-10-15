@@ -1,5 +1,6 @@
-<section aria-labelledby="metrics-title">
-    <h2 id="metrics-title">Métricas — {{ $simulation['label'] }}</h2>
+@php($resultPrefix = isset($resultKey) ? 'saved-'.$resultKey.'-' : '')
+<section aria-labelledby="{{ $resultPrefix }}metrics-title">
+    <h2 id="{{ $resultPrefix }}metrics-title">Métricas — {{ $simulation['label'] }}</h2>
     @if ($simulation['quantum'] !== null)
         <p>Quantum: {{ $simulation['quantum'] }}</p>
     @endif
@@ -22,8 +23,8 @@
     @endif
 </section>
 
-<section aria-labelledby="gantt-title">
-    <h2 id="gantt-title">Diagrama de Gantt — {{ $simulation['label'] }}</h2>
+<section aria-labelledby="{{ $resultPrefix }}gantt-title">
+    <h2 id="{{ $resultPrefix }}gantt-title">Diagrama de Gantt — {{ $simulation['label'] }}</h2>
     <p>Intervalos [inicio, fin). CPU ociosa se identifica como idle. Los detalles completos de cada segmento aparecen en la tabla.</p>
     <div class="table-container" role="region" aria-label="Línea de tiempo de CPU" tabindex="0">
         <ol class="gantt-track">
@@ -38,7 +39,7 @@
         </ol>
     </div>
     <div class="table-container">
-        <table id="gantt-segments">
+        <table id="{{ $resultPrefix }}gantt-segments">
             <caption>Segmentos de ejecución (unidades de tiempo)</caption>
             <thead><tr><th>Proceso / CPU ociosa</th><th>Inicio</th><th>Fin</th></tr></thead>
             <tbody>

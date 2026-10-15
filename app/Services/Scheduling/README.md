@@ -14,9 +14,9 @@ mayúsculas y minúsculas y no admiten espacios al inicio o al final.
 límites y valida el lote resultante. Su método `generate` acepta un `Randomizer`
 opcional para pruebas reproducibles con un motor de semilla fija.
 
-Los formularios POST muestran el lote validado en la respuesta, sin guardarlo.
-La sesión solo maneja los errores y la recuperación de entrada de Laravel.
-No se implementa persistencia de simulaciones ni diagramas de Gantt.
+La validación manual y la generación solo preparan el lote. Ejecutar una
+simulación o comparación guarda sus resultados como se describe más abajo.
+La sesión maneja los errores y la recuperación de entrada de Laravel.
 
 ## FCFS
 
@@ -144,7 +144,7 @@ Tras validar o generar el lote, el formulario permite seleccionar un algoritmo
 y ejecutar `POST /planificacion/simular`. El backend vuelve a validar todos los
 procesos y la selección; Round Robin requiere un quantum entero positivo. Las
 cadenas decimales enteras del formulario se convierten a `int` solo después de
-validarlas. No se guarda la simulación ni se calculan otros algoritmos a la vez.
+validarlas. La simulación individual ejecuta solo el algoritmo seleccionado.
 
 `SchedulingSimulation` invoca uno de los cinco motores sin modificarlo y pasa
 sus segmentos a `SchedulingMetrics`, compartido por todos ellos. Ambos servicios
@@ -187,9 +187,9 @@ mantienen su propio estado. No se regeneran procesos ni se altera el lote
 entre algoritmos, y ejecuciones anteriores no afectan a la comparación.
 
 La planificación y las fórmulas siguen exclusivamente en los motores existentes
-y `SchedulingMetrics`. El comparador devuelve solo etiquetas, quantum y métricas;
-no conserva los segmentos que no se necesitan para la tabla. El quantum del
-usuario se usa en Round Robin y no altera los otros cuatro algoritmos.
+y `SchedulingMetrics`. El comparador conserva etiquetas, quantum, métricas y
+segmentos para guardar el resultado completo de los cinco algoritmos. El quantum
+del usuario se usa en Round Robin y no altera los otros cuatro algoritmos.
 
 `scheduling/partials/comparison.blade.php` presenta los cinco nombres, promedios
 de espera y retorno y sus fracciones exactas. El orden no cambia según el
@@ -197,4 +197,56 @@ resultado. El formulario conserva el quantum tras comparar y permite volver
 a ejecutar una simulación individual. La vista individual y su Gantt permanecen
 separados y no se modifican sus cálculos ni su representación de segmentos.
 
-Sin persistencia SQLite, historial ni funcionalidades del paso 10.
+## Persistencia e historial (paso 10)
+
+Cada POST válido a `/planificacion/simular` o `/planificacion/comparar` guarda
+automáticamente una instantánea en `scheduling_runs`, tabla exclusiva de M3.
+Validar o generar procesos no guarda una simulación. Reejecutar un lote crea
+otra entrada; no hay rutas de actualización ni borrado.
+
+La migración `2026_10_15_000000_create_scheduling_runs_table.php` crea la tabla
+mediante Laravel sobre la conexión `sqlite`. El modelo `SchedulingRun` utiliza
+esa conexión y casts JSON `array`, sin serialización PHP. Almacena:
+
+- `schema_version` (1), `mode` (`single` o `comparison`) y algoritmo individual;
+- quantum, nulo si una simulación individual no usa Round Robin;
+- `input_processes`, con identificador, llegada, ráfaga, prioridad y orden;
+- `results`, con algoritmo, quantum, segmentos, métricas por proceso, sumas,
+  cantidad de procesos y promedios de cada resultado;
+- `created_at` y `updated_at`. Las vistas muestran fechas en America/Guatemala.
+
+`SchedulingRunStore` persiste datos calculados por el backend en una transacción,
+sin aceptar métricas, segmentos ni atributos del modelo enviados por el cliente.
+Los motores y las fórmulas no acceden a la base de datos ni se modifican. Las
+comparaciones conservan los resultados completos de los cinco motores, incluidos
+los Gantt. Los errores de guardado devuelven HTTP 503, conservan los resultados
+visibles y avisan que no se guardaron; no revelan detalles internos.
+
+`GET /planificacion/historial` lista 20 registros por página, por fecha descendente
+y después ID descendente. Solo selecciona los metadatos de listado, sin cargar
+los JSON de todas las simulaciones. `GET /planificacion/historial/{id}` exige un
+identificador numérico, consulta con Eloquent y devuelve 404 si no existe. No
+admite modificaciones mediante parámetros. El detalle muestra los datos guardados
+sin recalcular ni volver a validar con reglas que pudieran cambiar en el futuro.
+En una comparación permite consultar métricas y Gantt de cada algoritmo, con IDs
+HTML distintos. La indisponibilidad de SQLite se informa mediante HTTP 503 genérico.
+
+Aplicación de la migración de M3 exclusivamente:
+
+```sh
+php artisan migrate --database=sqlite --path=database/migrations/2026_10_15_000000_create_scheduling_runs_table.php --force
+```
+
+Las pruebas M3 crean su tabla con `migrate` sobre SQLite `:memory:`; una prueba
+adicional comprueba recuperación tras cerrar y abrir un archivo SQLite temporal.
+Para ejecutar la suite completa sin solicitar migraciones destructivas desde
+los traits preexistentes, usar:
+
+```sh
+php artisan test --bootstrap=tests/Support/SchedulingSqliteBootstrap.php
+```
+
+Ese bootstrap exige testing y SQLite en memoria, aplica `migrate`, comparte el
+PDO con `RefreshDatabaseState` y restablece los manejadores de PHPUnit. No toca
+datos reales ni cambia la configuración o archivos de M1/M2. No se implementan
+funcionalidades del paso 11.

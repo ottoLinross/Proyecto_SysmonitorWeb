@@ -2,15 +2,16 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\CreatesSchedulingStorage;
 use Tests\TestCase;
 
 class SchedulingComparisonTest extends TestCase
 {
+    use CreatesSchedulingStorage;
+
     public function test_comparison_table_renders_five_algorithms_and_known_averages_in_order(): void
     {
-        DB::shouldReceive('connection')->never();
         $response = $this->post('/planificacion/comparar', $this->payload());
         $response->assertOk()->assertViewIs('scheduling.index')
             ->assertSeeText('Comparación de algoritmos')->assertSeeText('Round Robin utiliza quantum 2.')

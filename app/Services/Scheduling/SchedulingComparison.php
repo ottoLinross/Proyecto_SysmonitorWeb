@@ -22,6 +22,7 @@ class SchedulingComparison
                 'algorithm' => $result['algorithm'],
                 'label' => $result['label'],
                 'quantum' => $result['quantum'],
+                'segments' => $result['segments'],
                 'metrics' => $result['metrics'],
             ];
         }

@@ -3,16 +3,17 @@
 namespace Tests\Feature;
 
 use App\Services\Scheduling\SchedulingSimulation;
-use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\CreatesSchedulingStorage;
 use Tests\TestCase;
 
 class SchedulingSimulationTest extends TestCase
 {
+    use CreatesSchedulingStorage;
+
     #[DataProvider('algorithms')]
     public function test_blade_renders_backend_metrics_and_every_gantt_segment(string $algorithm): void
     {
-        DB::shouldReceive('connection')->never();
         $response = $this->post('/planificacion/simular', $this->payload($algorithm));
         $response->assertOk()->assertViewIs('scheduling.index')
             ->assertSeeText('Diagrama de Gantt')->assertSeeText('CPU ociosa (idle)')

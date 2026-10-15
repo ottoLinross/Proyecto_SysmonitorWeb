@@ -30,7 +30,24 @@
             <p>SysMonitor · M3</p>
             <h1>Planificación de CPU</h1>
             <p>Estructura inicial del módulo de planificación de CPU.</p>
+            <nav aria-label="Navegación de planificación">
+                <a href="{{ route('scheduling.index') }}">Nueva simulación</a> ·
+                <a href="{{ route('scheduling.history') }}">Historial de simulaciones</a>
+            </nav>
         </header>
+        @isset($savedRun)
+            <section aria-labelledby="saved-title">
+                <h2 id="saved-title">Simulación guardada #{{ $savedRun->id }}</h2>
+                <p>Fecha: <time datetime="{{ $savedRun->created_at->toIso8601String() }}">{{ $savedRun->created_at->copy()->timezone('America/Guatemala')->format('Y-m-d H:i:s') }}</time> (Guatemala).</p>
+                <a href="{{ route('scheduling.history.show', $savedRun->id) }}">Consultar detalle guardado</a>
+                @if ($isHistoryDetail ?? false)
+                    <p>Se muestran los resultados almacenados, sin recalcular. Simular o comparar este lote crea un registro nuevo.</p>
+                @endif
+            </section>
+        @endisset
+        @isset($saveError)
+            <p class="errors" role="alert">{{ $saveError }}</p>
+        @endisset
         @php
             $limits = \App\Services\Scheduling\ProcessInput::class;
             $rows = old('processes', [['id' => '', 'arrival_time' => '', 'burst_time' => '', 'priority' => '']]);
@@ -90,7 +107,7 @@
         @isset($processes)
             <section aria-labelledby="results-title">
                 <h2 id="results-title">Procesos de entrada validados</h2>
-                <p>Estos datos no se guardan. Selecciona un algoritmo para simular el lote.</p>
+                <p>La simulación o comparación se guarda al ejecutarla. Selecciona un algoritmo para simular el lote.</p>
                 <div class="table-container">
                     <table>
                         <thead><tr><th>Identificador/nombre</th><th>Llegada</th><th>Ráfaga</th><th>Prioridad</th></tr></thead>
@@ -128,6 +145,14 @@
         @endisset
         @isset($comparison)
             @include('scheduling.partials.comparison')
+            @if ($isHistoryDetail ?? false)
+                @foreach ($comparison['results'] as $result)
+                    <details>
+                        <summary>Resultados y Gantt — {{ $result['label'] }}</summary>
+                        @include('scheduling.partials.results', ['simulation' => $result, 'resultKey' => $result['algorithm']])
+                    </details>
+                @endforeach
+            @endif
         @endisset
     </main>
     <script>

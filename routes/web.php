@@ -3,6 +3,7 @@
 use App\Http\Controllers\CpuMemoryController;
 use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\SchedulingController;
+use App\Http\Controllers\SchedulingHistoryController;
 use App\Http\Controllers\TestProcessController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,9 @@ Route::post('/planificacion/manual', [SchedulingController::class, 'manual'])->n
 Route::post('/planificacion/aleatoria', [SchedulingController::class, 'random'])->name('scheduling.random');
 Route::post('/planificacion/simular', [SchedulingController::class, 'simulate'])->name('scheduling.simulate');
 Route::post('/planificacion/comparar', [SchedulingController::class, 'compare'])->name('scheduling.compare');
+Route::get('/planificacion/historial', [SchedulingHistoryController::class, 'index'])->name('scheduling.history');
+Route::get('/planificacion/historial/{id}', [SchedulingHistoryController::class, 'show'])
+    ->whereNumber('id')->name('scheduling.history.show');
 Route::get('/cpu-memoria', [CpuMemoryController::class, 'index'])->name('cpu-memory.index');
 Route::get('/cpu-memoria/metricas', [CpuMemoryController::class, 'metrics'])->name('cpu-memory.metrics');
 Route::post('/procesos/prueba', [TestProcessController::class, 'store'])->name('processes.test.store');
