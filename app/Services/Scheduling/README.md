@@ -59,5 +59,26 @@ próxima y vuelve a seleccionar. No añade ocio final ni intervalos de duración
 cero. El lote vacío devuelve una lista vacía. La selección cuesta O(n²) para
 el lote completo, adecuado al límite de 50 procesos de entrada.
 
-Este paso solo añade SJF no expropiativo y sus pruebas: sin SRTF, cambios en
-formularios o rutas, métricas, Gantt ni comparación global.
+El motor SJF no modifica formularios ni rutas, no calcula métricas ni compara
+algoritmos.
+
+## SRTF preemptivo
+
+`SrtfScheduler::schedule(array $processes)` recibe procesos previamente validados
+por `ProcessInput` y usa el mismo formato de intervalos que FCFS y SJF. Es PHP
+puro y no modifica los procesos originales ni conserva estado entre ejecuciones.
+
+Selecciona entre los procesos disponibles por tiempo restante ascendente,
+después llegada ascendente y finalmente posición original de entrada. Ni el
+identificador ni la prioridad intervienen. Una nueva llegada con menor tiempo
+restante expropia al proceso actual; en igualdad continúa el que llegó antes.
+Las llegadas simultáneas se consideran juntas antes de seleccionar.
+
+La simulación avanza por eventos de llegada o finalización, sin iterar por cada
+unidad de tiempo. El tiempo restante se conserva al expropiar y reanudar. Si no
+hay procesos listos, añade `idle` hasta la próxima llegada. Combina intervalos
+contiguos del mismo proceso, sin ocultar interrupciones reales, sin segmentos de
+duración cero ni ocio final. Un lote vacío devuelve una lista vacía.
+
+Este paso añade solo el motor SRTF y sus pruebas: no implementa Round Robin,
+integración visual, métricas, Gantt, persistencia ni comparación global.
