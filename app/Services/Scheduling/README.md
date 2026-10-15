@@ -109,6 +109,32 @@ por eso un intervalo combinado puede durar más que un quantum. No genera
 intervalos de duración cero ni ocio final. El lote vacío devuelve `[]` con
 quantum válido. No modifica la entrada ni conserva estado entre simulaciones.
 
-Este paso solo añade el motor Round Robin, documentación y pruebas. No modifica
-los algoritmos anteriores, formularios o rutas, ni implementa planificación por
-prioridades, métricas, Gantt, persistencia o comparación global.
+El motor Round Robin no modifica formularios ni rutas, no calcula métricas ni
+compara algoritmos.
+
+## Prioridades no expropiativo
+
+Convención: **menor número = mayor prioridad**. Por ejemplo, prioridad 1 se
+selecciona antes que prioridad 10 cuando ambos procesos están disponibles.
+
+`PriorityScheduler::schedule(array $processes)` recibe procesos previamente
+validados por `ProcessInput`. Es PHP puro y devuelve el mismo formato de
+intervalos `[inicio, fin)` que FCFS, SJF, SRTF y Round Robin, sin modificar la
+entrada ni conservar estado entre simulaciones.
+
+Cuando la CPU queda libre, considera únicamente procesos con llegada menor o
+igual al tiempo actual. Ordena por prioridad numérica ascendente, luego llegada
+ascendente y finalmente posición original de entrada. El identificador y la
+duración no intervienen en los empates. Ejecuta la ráfaga completa: una nueva
+llegada con mayor prioridad NO expropia al proceso actual y solo compite cuando
+la CPU vuelve a quedar libre. Una llegada exactamente al finalizar sí participa
+en la siguiente selección.
+
+Si no hay procesos disponibles, emite `idle` hasta la próxima llegada, sin
+esperar artificialmente a procesos futuros de mayor prioridad. No genera
+intervalos de duración cero ni ocio final. El lote vacío devuelve `[]`.
+La selección cuesta O(n²), adecuada al límite vigente de 50 procesos.
+
+Este paso solo añade el motor de Prioridades no expropiativo, documentación y
+pruebas. No modifica los otros algoritmos ni añade prioridades expropiativas,
+aging, interfaz, métricas, Gantt, persistencia o comparación global.
