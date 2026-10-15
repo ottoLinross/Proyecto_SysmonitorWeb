@@ -16,4 +16,29 @@ opcional para pruebas reproducibles con un motor de semilla fija.
 
 Los formularios POST muestran el lote validado en la respuesta, sin guardarlo.
 La sesión solo maneja los errores y la recuperación de entrada de Laravel.
-No se implementan algoritmos, persistencia de simulaciones ni diagramas de Gantt.
+No se implementa persistencia de simulaciones ni diagramas de Gantt.
+
+## FCFS
+
+`FcfsScheduler::schedule(array $processes)` es lógica PHP pura, sin Laravel,
+base de datos, reloj ni aleatoriedad. Recibe procesos `SchedulingProcess` ya
+validados por `ProcessInput` y devuelve una lista cronológica de intervalos:
+
+```php
+[
+    ['type' => 'idle', 'process_id' => null, 'start_time' => 0, 'end_time' => 3],
+    ['type' => 'process', 'process_id' => 'P1', 'start_time' => 3, 'end_time' => 5],
+]
+```
+
+Ordena por llegada ascendente y desempata por la posición original de entrada.
+No utiliza nombre, prioridad ni duración para desempatar. Cada proceso ejecuta
+su ráfaga completa sin interrupción. Los intervalos son `[inicio, fin)`, con
+ocio explícito desde cero o entre procesos cuando corresponda, sin ocio final
+ni intervalos de duración cero. Una entrada vacía produce una lista vacía.
+No modifica la entrada ni conserva estado entre ejecuciones.
+
+El identificador permite relacionar cada intervalo con su proceso original
+para calcular métricas y representar Gantt posteriormente. Este paso solo
+añade el motor FCFS; no modifica formularios ni rutas, no calcula métricas,
+no compara algoritmos y no implementa otros algoritmos.
