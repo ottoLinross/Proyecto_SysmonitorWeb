@@ -116,14 +116,18 @@
                         @endforeach
                     </select>
                     <label for="quantum">Quantum entero positivo (solo Round Robin)</label>
-                    <input id="quantum" name="quantum" type="number" min="1" step="1" value="{{ $simulation['quantum'] ?? 2 }}">
+                    <input id="quantum" name="quantum" type="number" min="1" step="1" value="{{ $comparison['quantum'] ?? $simulation['quantum'] ?? 2 }}">
                     <p>Prioridades: menor número = mayor prioridad. Variante no expropiativa.</p>
                     <button type="submit">Simular lote</button>
+                    <button type="submit" formaction="{{ route('scheduling.compare') }}">Comparar cinco algoritmos</button>
                 </form>
             </section>
         @endisset
         @isset($simulation)
             @include('scheduling.partials.results')
+        @endisset
+        @isset($comparison)
+            @include('scheduling.partials.comparison')
         @endisset
     </main>
     <script>

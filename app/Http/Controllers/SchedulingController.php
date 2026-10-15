@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SchedulingComparisonRequest;
 use App\Http\Requests\SchedulingSimulationRequest;
 use App\Services\Scheduling\ProcessInput;
 use App\Services\Scheduling\RandomProcessGenerator;
+use App\Services\Scheduling\SchedulingComparison;
 use App\Services\Scheduling\SchedulingSimulation;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -36,6 +38,16 @@ class SchedulingController extends Controller
         return view('scheduling.index', [
             'processes' => $processes,
             'simulation' => $simulation->run($processes, $options['algorithm'], isset($options['quantum']) ? (int) $options['quantum'] : null),
+        ]);
+    }
+
+    public function compare(SchedulingComparisonRequest $request, ProcessInput $input, SchedulingComparison $comparison): View
+    {
+        $processes = $input->validate($request->all());
+
+        return view('scheduling.index', [
+            'processes' => $processes,
+            'comparison' => $comparison->compare($processes, (int) $request->validated('quantum')),
         ]);
     }
 }

@@ -171,4 +171,30 @@ los segmentos, incluso los muy cortos. Hay desplazamiento horizontal y nombres
 escapados por Blade. No se ejecuta planificación ni se calculan métricas en
 JavaScript. Se mantiene el formato `type`, `process_id`, `start_time`, `end_time`.
 
-Sin tabla comparativa global, persistencia SQLite ni historial de simulaciones.
+## Comparación de los cinco algoritmos
+
+El botón «Comparar cinco algoritmos» envía el lote validado y el quantum a
+`POST /planificacion/comparar`. El servidor vuelve a validar los procesos y exige
+un quantum entero positivo para Round Robin. La validación del quantum se
+comparte con la simulación individual; no depende del algoritmo seleccionado
+en el formulario cuando se solicita la comparación.
+
+`SchedulingComparison` invoca `SchedulingSimulation::run` en orden fijo:
+FCFS, SJF no expropiativo, SRTF, Round Robin y Prioridades no expropiativo.
+Cada ejecución recibe un array independiente con clones de los mismos DTO
+inmutables, conservando todos los valores y el orden original. Los schedulers
+mantienen su propio estado. No se regeneran procesos ni se altera el lote
+entre algoritmos, y ejecuciones anteriores no afectan a la comparación.
+
+La planificación y las fórmulas siguen exclusivamente en los motores existentes
+y `SchedulingMetrics`. El comparador devuelve solo etiquetas, quantum y métricas;
+no conserva los segmentos que no se necesitan para la tabla. El quantum del
+usuario se usa en Round Robin y no altera los otros cuatro algoritmos.
+
+`scheduling/partials/comparison.blade.php` presenta los cinco nombres, promedios
+de espera y retorno y sus fracciones exactas. El orden no cambia según el
+resultado. El formulario conserva el quantum tras comparar y permite volver
+a ejecutar una simulación individual. La vista individual y su Gantt permanecen
+separados y no se modifican sus cálculos ni su representación de segmentos.
+
+Sin persistencia SQLite, historial ni funcionalidades del paso 10.

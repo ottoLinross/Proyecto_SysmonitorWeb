@@ -17,15 +17,20 @@ class SchedulingSimulationRequest extends FormRequest
     {
         return [
             'algorithm' => ['required', 'string', Rule::in(array_keys(SchedulingSimulation::ALGORITHMS))],
-            'quantum' => [
-                'exclude_unless:algorithm,round_robin', 'bail', 'required',
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (! is_int($value) && ! is_string($value)) {
-                        $fail('El quantum debe ser un entero mayor que cero.');
-                    }
-                },
-                'integer', 'regex:/\A[0-9]+\z/', 'min:1',
-            ],
+            'quantum' => ['exclude_unless:algorithm,round_robin', ...$this->quantumRules()],
+        ];
+    }
+
+    protected function quantumRules(): array
+    {
+        return [
+            'bail', 'required',
+            function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! is_int($value) && ! is_string($value)) {
+                    $fail('El quantum debe ser un entero mayor que cero.');
+                }
+            },
+            'integer', 'regex:/\A[0-9]+\z/', 'min:1',
         ];
     }
 }
