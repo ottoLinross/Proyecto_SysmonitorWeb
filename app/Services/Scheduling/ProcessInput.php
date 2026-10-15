@@ -21,10 +21,21 @@ class ProcessInput
     /** @return list<SchedulingProcess> */
     public function validate(array $input): array
     {
+        $input = ['processes' => $input['processes'] ?? null];
+        // Reject excessive batches before Laravel expands wildcard rules for every row.
+        Validator::make($input, [
+            'processes' => ['required', 'array', 'list', 'min:1', 'max:'.self::MAX_PROCESSES],
+        ], [
+            'processes.required' => 'Debes ingresar entre 1 y '.self::MAX_PROCESSES.' procesos.',
+            'processes.array' => 'Los procesos deben enviarse como una lista.',
+            'processes.list' => 'Los procesos deben enviarse como una lista consecutiva.',
+            'processes.max' => 'No se permiten más de '.self::MAX_PROCESSES.' procesos.',
+        ])->validate();
+
         $validated = Validator::make($input, [
             'processes' => ['required', 'array', 'list', 'min:1', 'max:'.self::MAX_PROCESSES],
             'processes.*' => ['required', 'array:id,arrival_time,burst_time,priority'],
-            'processes.*.id' => ['required', 'string', 'max:'.self::MAX_ID_LENGTH, 'distinct:strict', 'regex:/\A\S(?:[^\r\n]*\S)?\z/u'],
+            'processes.*.id' => ['bail', 'required', 'string', 'max:'.self::MAX_ID_LENGTH, 'distinct:strict', 'regex:/\A\S(?:[^\r\n]*\S)?\z/u'],
             'processes.*.arrival_time' => $this->integerRules(0, self::MAX_ARRIVAL),
             'processes.*.burst_time' => $this->integerRules(1, self::MAX_BURST),
             'processes.*.priority' => $this->integerRules(self::MIN_PRIORITY, self::MAX_PRIORITY),

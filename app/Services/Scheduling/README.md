@@ -250,3 +250,38 @@ Ese bootstrap exige testing y SQLite en memoria, aplica `migrate`, comparte el
 PDO con `RefreshDatabaseState` y restablece los manejadores de PHPUnit. No toca
 datos reales ni cambia la configuración o archivos de M1/M2. No se implementan
 funcionalidades del paso 11.
+
+## Auditoría y correcciones del paso 11
+
+Se detectaron y reprodujeron dos problemas:
+
+- La validación de lotes excesivos expandía las reglas wildcard y validaba todas
+  las filas antes de rechazar la cantidad. `ProcessInput` ahora comprueba primero
+  la estructura y el límite de 50 procesos, descarta campos superiores ajenos al
+  lote y corta la validación del identificador si su tipo o longitud son inválidos.
+  No se cambiaron los límites de llegada, ráfaga, prioridad ni quantum.
+- El bootstrap verificaba `database.connections.sqlite.database`, pero `DB_URL`
+  puede reemplazar esa configuración al resolver la conexión. Una prueba aislada
+  demostró que podía migrar un archivo temporal aunque la configuración inicial
+  dijera `:memory:`. Ahora exige también driver SQLite y base `:memory:` en la
+  conexión efectiva, antes de abrir PDO o ejecutar migraciones. El helper de las
+  pruebas M3 realiza la misma comprobación. Los manejadores de PHPUnit se
+  restablecen en `finally`, tanto con éxito como si la configuración se rechaza;
+  no se capturan ni silencian los errores de migración o las aserciones.
+
+Las regresiones comprueban lotes excesivos en las tres rutas de entrada,
+enteros extremos, decimales JSON reales, conservación de registros anteriores,
+rechazo de bases en archivo y entornos distintos de testing. Otra prueba verifica
+el lote máximo con los cinco motores y quantum 1: se conservan las 50000 unidades
+de ejecución y los tiempos no son negativos. En Round Robin esto supone hasta
+50001 segmentos contando el ocio inicial; la representación puede ser extensa.
+
+Se revisaron los desempates, expropiación, FIFO y fronteras, métricas, Gantt,
+comparación, campos persistidos, casts JSON, transacciones, rutas, CSRF y escape
+Blade. No se encontraron fallos que exigieran modificar los schedulers, fórmulas,
+persistencia o vistas. El código de M3 no usa comandos del sistema, `/proc` ni
+administración de procesos reales. Se ejecutaron las pruebas M3 y la regresión
+completa mediante el bootstrap seguro. Una prueba temporal deliberadamente
+fallida confirmó una salida no cero para aserciones y excepciones.
+
+No se modificaron bases reales, simulaciones existentes ni lógica de M1/M2.
