@@ -6,6 +6,7 @@ Proyecto Sysmonitor web del curso de sistemas operativos
 - [M1 — Procesos: arquitectura, seguridad, ejecución local y pruebas](docs/M1_PROCESOS.md).
 - [M2 — CPU y Memoria: uso, arquitectura, métricas, pruebas y limitaciones](docs/M2_CPU_MEMORIA.md).
 - [Contrato JSON de métricas de M2](docs/cpu-memory-metrics.md).
+- [M3 — Planificación de CPU: arquitectura, uso, algoritmos, historial y pruebas](docs/M3_PLANIFICACION.md).
 
 ## Panel de CPU y memoria
 
