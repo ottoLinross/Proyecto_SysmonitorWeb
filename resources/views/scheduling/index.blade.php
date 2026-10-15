@@ -18,6 +18,10 @@
         input[type="number"] { width: 110px; }
         button { margin-top: 12px; cursor: pointer; }
         .errors { color: #991b1b; }
+        .gantt-track { display: flex; list-style: none; padding: 0; margin: 16px 0; min-width: 800px; }
+        .gantt-segment { flex-basis: 0; min-width: 0; padding: 12px 0; border: 1px solid #fff; background: #dbeafe; overflow: hidden; text-align: center; }
+        .gantt-segment span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .gantt-idle { background: #e2e8f0; }
     </style>
 </head>
 <body>
@@ -86,7 +90,7 @@
         @isset($processes)
             <section aria-labelledby="results-title">
                 <h2 id="results-title">Procesos de entrada validados</h2>
-                <p>Estos datos no se guardan. Todavía no se ejecutan algoritmos de planificación.</p>
+                <p>Estos datos no se guardan. Selecciona un algoritmo para simular el lote.</p>
                 <div class="table-container">
                     <table>
                         <thead><tr><th>Identificador/nombre</th><th>Llegada</th><th>Ráfaga</th><th>Prioridad</th></tr></thead>
@@ -97,7 +101,29 @@
                         </tbody>
                     </table>
                 </div>
+                <form method="POST" action="{{ route('scheduling.simulate') }}">
+                    @csrf
+                    @foreach ($processes as $index => $process)
+                        <input type="hidden" name="processes[{{ $index }}][id]" value="{{ $process->id }}">
+                        <input type="hidden" name="processes[{{ $index }}][arrival_time]" value="{{ $process->arrivalTime }}">
+                        <input type="hidden" name="processes[{{ $index }}][burst_time]" value="{{ $process->burstTime }}">
+                        <input type="hidden" name="processes[{{ $index }}][priority]" value="{{ $process->priority }}">
+                    @endforeach
+                    <label for="algorithm">Algoritmo</label>
+                    <select id="algorithm" name="algorithm" required>
+                        @foreach (\App\Services\Scheduling\SchedulingSimulation::ALGORITHMS as $key => $label)
+                            <option value="{{ $key }}" @selected(($simulation['algorithm'] ?? 'fcfs') === $key)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <label for="quantum">Quantum entero positivo (solo Round Robin)</label>
+                    <input id="quantum" name="quantum" type="number" min="1" step="1" value="{{ $simulation['quantum'] ?? 2 }}">
+                    <p>Prioridades: menor número = mayor prioridad. Variante no expropiativa.</p>
+                    <button type="submit">Simular lote</button>
+                </form>
             </section>
+        @endisset
+        @isset($simulation)
+            @include('scheduling.partials.results')
         @endisset
     </main>
     <script>

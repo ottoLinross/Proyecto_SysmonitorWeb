@@ -135,6 +135,40 @@ esperar artificialmente a procesos futuros de mayor prioridad. No genera
 intervalos de duración cero ni ocio final. El lote vacío devuelve `[]`.
 La selección cuesta O(n²), adecuada al límite vigente de 50 procesos.
 
-Este paso solo añade el motor de Prioridades no expropiativo, documentación y
-pruebas. No modifica los otros algoritmos ni añade prioridades expropiativas,
-aging, interfaz, métricas, Gantt, persistencia o comparación global.
+El motor de Prioridades no modifica los otros algoritmos ni implementa
+prioridades expropiativas o aging.
+
+## Métricas compartidas y Gantt
+
+Tras validar o generar el lote, el formulario permite seleccionar un algoritmo
+y ejecutar `POST /planificacion/simular`. El backend vuelve a validar todos los
+procesos y la selección; Round Robin requiere un quantum entero positivo. Las
+cadenas decimales enteras del formulario se convierten a `int` solo después de
+validarlas. No se guarda la simulación ni se calculan otros algoritmos a la vez.
+
+`SchedulingSimulation` invoca uno de los cinco motores sin modificarlo y pasa
+sus segmentos a `SchedulingMetrics`, compartido por todos ellos. Ambos servicios
+son PHP puro. Para cada proceso, `completion_time` es el final de su último
+segmento; `turnaround_time = completion_time - arrival_time` y
+`waiting_time = turnaround_time - burst_time`. Los segmentos de ocio no cuentan
+como ejecución de procesos. La espera anterior a la llegada no se suma.
+
+Los tiempos y sumas permanecen enteros. Los promedios se calculan una sola vez
+como suma/cantidad, sin `round`, sin redondear métricas individuales ni reutilizar
+decimales para otros cálculos. Se devuelven las sumas y `process_count` para
+conservar la fracción exacta incluso cuando su decimal es periódico; la vista
+muestra también esas fracciones. Un lote vacío devuelve métricas vacías y
+promedios cero. No se devuelven tiempos negativos: ejecuciones discontinuas,
+solapadas, con procesos desconocidos, anteriores a la llegada o con burst total
+distinto del declarado provocan `InvalidArgumentException` en lugar de ocultar
+el error ajustando el resultado a cero.
+
+`scheduling/partials/results.blade.php` presenta las métricas de una simulación
+y un Gantt construido únicamente con sus segmentos del backend. Las barras
+tienen pesos proporcionales a su duración, identifican `idle` explícitamente
+y muestran proceso e inicio/fin. Una tabla conserva el detalle legible de todos
+los segmentos, incluso los muy cortos. Hay desplazamiento horizontal y nombres
+escapados por Blade. No se ejecuta planificación ni se calculan métricas en
+JavaScript. Se mantiene el formato `type`, `process_id`, `start_time`, `end_time`.
+
+Sin tabla comparativa global, persistencia SQLite ni historial de simulaciones.
