@@ -39,6 +39,25 @@ ni intervalos de duración cero. Una entrada vacía produce una lista vacía.
 No modifica la entrada ni conserva estado entre ejecuciones.
 
 El identificador permite relacionar cada intervalo con su proceso original
-para calcular métricas y representar Gantt posteriormente. Este paso solo
-añade el motor FCFS; no modifica formularios ni rutas, no calcula métricas,
-no compara algoritmos y no implementa otros algoritmos.
+para calcular métricas y representar Gantt posteriormente. El motor FCFS no
+modifica formularios ni rutas, no calcula métricas ni compara algoritmos.
+
+## SJF no expropiativo
+
+`SjfScheduler::schedule(array $processes)` recibe el mismo lote previamente
+validado y devuelve el mismo formato de intervalos que FCFS. Es PHP puro,
+sin dependencias de Laravel, y no modifica la entrada ni conserva estado.
+
+Cada vez que la CPU queda libre, considera solo procesos con llegada menor
+o igual al tiempo actual. Selecciona por ráfaga ascendente, después llegada
+ascendente y finalmente posición original de entrada. El nombre y la prioridad
+no intervienen en el desempate. El proceso seleccionado termina su ráfaga
+completa aunque durante su ejecución lleguen procesos más cortos.
+
+Si no hay procesos disponibles, emite un intervalo `idle` hasta la llegada más
+próxima y vuelve a seleccionar. No añade ocio final ni intervalos de duración
+cero. El lote vacío devuelve una lista vacía. La selección cuesta O(n²) para
+el lote completo, adecuado al límite de 50 procesos de entrada.
+
+Este paso solo añade SJF no expropiativo y sus pruebas: sin SRTF, cambios en
+formularios o rutas, métricas, Gantt ni comparación global.
