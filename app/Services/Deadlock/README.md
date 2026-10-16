@@ -93,7 +93,7 @@ sin presentar el progreso parcial como una secuencia segura. Si no hay progreso,
 se muestra un mensaje sin filas inventadas. Se mantiene la lista de pendientes
 y la aclaración de que inseguridad no confirma interbloqueo.
 
-No se implementan grafos, ciclos, recuperación ni persistencia de simulaciones.
+No se implementan detección de ciclos, recuperación ni persistencia de simulaciones.
 Las solicitudes se evalúan únicamente como simulación educativa, según el
 apartado siguiente.
 
@@ -134,3 +134,42 @@ HTTP 200. En una concesión se presentan Allocation', Max, Available' y Need'
 en un bloque separado; los pasos y el análisis principal siguen correspondiendo
 al original. Cada nueva evaluación parte del escenario original, sin encadenar
 concesiones, guardar simulaciones ni asignar recursos reales del servidor.
+
+
+## Grafo de asignación de recursos (Prompt 7)
+
+`ResourceGraphBuilder::build(DeadlockScenario $scenario, ?ResourceRequest $request = null)`
+recibe objetos previamente validados por `ScenarioInput` y `ResourceRequestInput`.
+Reutiliza `NeedCalculator` y devuelve un `ResourceGraph` inmutable con listas de
+nodos (`id`, `type`) y aristas (`source`, `target`, `type`, `quantity`). No modifica
+el escenario ni evalúa seguridad o ciclos. Su tiempo y espacio son O(n*m).
+
+Los nodos se ordenan P1…Pn y luego R1…Rm, numéricamente. Cada R es un tipo de
+recurso, sin crear nodos para instancias individuales. Sus atributos `available`
+y `total` indican unidades disponibles y unidades existentes (Available más
+la suma de Allocation de la columna). Max es demanda, no inventario.
+Las aristas siguen el orden proceso/recurso y, dentro de cada par, Allocation,
+Need y Request. Se omiten cantidades cero:
+
+- `allocation`: R → P, unidades asignadas en Allocation.
+- `need`: P → R, necesidad potencial o demanda restante máxima; **no representa
+  necesariamente una solicitud activa**.
+- `request`: P → R, vector explícito enviado para evaluación, separado de Need;
+  no se suma a Need ni representa una concesión.
+
+La página ofrece una representación accesible equivalente del grafo mediante
+una tabla de nodos y otra de aristas dirigidas, con cantidades, encabezados,
+captions y regiones desplazables por teclado. Conserva una descripción textual,
+usa escape Blade y no requiere JavaScript ni dependencias externas. Sin aristas
+se muestra un mensaje explícito. Las matrices, seguridad, pasos y formulario de
+solicitudes se mantienen.
+
+El grafo siempre corresponde al escenario original. Una Request bien formada
+se representa incluso si su evaluación la deniega o excede Need; la decisión
+se consulta en el resultado existente. Tras una concesión simulada, la arista
+Request describe el vector evaluado, no una solicitud todavía pendiente.
+Una Request mal formada no crea aristas explícitas; el grafo original permanece.
+
+Es una simulación educativa: un ciclo con múltiples instancias de recursos no
+demuestra por sí solo un interbloqueo. El grafo no confirma interbloqueos.
+La detección de ciclos queda reservada para el Prompt 8, sin implementarla aquí.

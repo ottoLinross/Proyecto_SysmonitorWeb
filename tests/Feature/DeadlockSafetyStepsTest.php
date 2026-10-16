@@ -9,7 +9,7 @@ class DeadlockSafetyStepsTest extends TestCase
 {
     private function tableRows(string $html): array
     {
-        preg_match('/<tbody>(.*?)<\/tbody>/s', $html, $body);
+        preg_match('/<caption>Pasos reales del análisis de seguridad<\/caption>.*?<tbody>(.*?)<\/tbody>/s', $html, $body);
         preg_match_all('/<tr>(.*?)<\/tr>/s', $body[1] ?? '', $rows);
 
         return array_map(function ($row) {
@@ -58,7 +58,7 @@ class DeadlockSafetyStepsTest extends TestCase
             'n' => 2, 'm' => 1, 'allocation' => '[[1],[1]]', 'max' => '[[2],[2]]', 'available' => '[0]',
         ])->assertOk()->assertSeeText('Estado inseguro')->assertSeeText('P1, P2')
             ->assertSeeText('Ningún proceso pudo ejecutarse; no hay pasos registrados.')
-            ->assertDontSee('<table>', false)
+            ->assertDontSee('<caption>Pasos reales del análisis de seguridad</caption>', false)
             ->assertViewHas('safety', fn ($result) => $result->steps === []);
 
         $this->assertSame([], $this->tableRows($response->getContent()));

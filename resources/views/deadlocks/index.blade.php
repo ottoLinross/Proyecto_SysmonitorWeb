@@ -132,6 +132,7 @@
                     </div>
                 @endif
             </section>
+            @include('deadlocks.partials.resource-graph')
             <form method="POST" action="{{ route('deadlocks.request') }}" aria-label="Solicitud adicional de recursos">
                 @csrf
                 <h2>Evaluar solicitud de recursos</h2>
