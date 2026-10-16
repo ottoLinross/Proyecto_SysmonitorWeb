@@ -12,7 +12,7 @@
         p { color: #526173; line-height: 1.5; }
         section, form { margin-top: 24px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
         label { display: block; margin-top: 16px; font-weight: 600; }
-        input, textarea, button { max-width: 100%; padding: 8px; font: inherit; }
+        input, textarea, select, button { max-width: 100%; padding: 8px; font: inherit; }
         textarea { display: block; width: 100%; font-family: monospace; }
         button { margin-top: 20px; cursor: pointer; }
         .errors { color: #991b1b; }
@@ -132,6 +132,54 @@
                     </div>
                 @endif
             </section>
+            <form method="POST" action="{{ route('deadlocks.request') }}" aria-label="Solicitud adicional de recursos">
+                @csrf
+                <h2>Evaluar solicitud de recursos</h2>
+                <p>Simulación educativa: no reserva ni asigna recursos reales del servidor. Cada solicitud se evalúa sobre el escenario original mostrado arriba.</p>
+                <input type="hidden" name="n" value="{{ $scenario->n }}">
+                <input type="hidden" name="m" value="{{ $scenario->m }}">
+                <input type="hidden" name="allocation" value="{{ json_encode($scenario->allocation) }}">
+                <input type="hidden" name="max" value="{{ json_encode($scenario->max) }}">
+                <input type="hidden" name="available" value="{{ json_encode($scenario->available) }}">
+                <label for="process">Proceso existente</label>
+                <select id="process" name="process" required>
+                    @for ($i = 1; $i <= $scenario->n; $i++)
+                        <option value="{{ $i }}" @selected($display($requestValues['process'] ?? '1') === (string) $i)>P{{ $i }}</option>
+                    @endfor
+                </select>
+                <label for="request">Request — Vector solicitado ({{ $scenario->m }} enteros)</label>
+                <textarea id="request" name="request" rows="2" required>{{ $display($requestValues['request'] ?? '') }}</textarea>
+                <p>Una lista JSON con {{ $scenario->m }} valores entre 0 y {{ $limits::MAX_VALUE }}. Se aplican los mismos límites del escenario.</p>
+                <button type="submit">Evaluar solicitud</button>
+            </form>
+            @if ($requestInvalid ?? false)
+                <section aria-label="Resultado de solicitud inválida">
+                    <h2>Solicitud inválida</h2>
+                    <p>Proceso recibido: {{ $display($requestValues['process'] ?? '') }}.</p>
+                    <p>Request recibido: {{ $display($requestValues['request'] ?? '') }}.</p>
+                    <p>Corrige los errores indicados. El escenario original se conserva.</p>
+                </section>
+            @endif
+            @isset($requestResult)
+                <section aria-labelledby="request-result-title">
+                    <h2 id="request-result-title">Resultado de la solicitud</h2>
+                    <p>Proceso: P{{ $requestResult->request->process + 1 }}.</p>
+                    <p>Request: <code>{{ json_encode($requestResult->request->vector) }}</code></p>
+                    <p>{{ $requestResult->explanation }}</p>
+                    @if ($requestResult->simulated !== null)
+                        <h3>Estado simulado concedido</h3>
+                        <p>Estos datos son una copia temporal; no reemplazan el escenario original.</p>
+                        <h4>Allocation simulada</h4>
+                        <pre>{{ json_encode($requestResult->simulated->allocation, JSON_PRETTY_PRINT) }}</pre>
+                        <h4>Max simulada</h4>
+                        <pre>{{ json_encode($requestResult->simulated->max, JSON_PRETTY_PRINT) }}</pre>
+                        <h4>Available simulado</h4>
+                        <pre>{{ json_encode($requestResult->simulated->available, JSON_PRETTY_PRINT) }}</pre>
+                        <h4>Need simulada</h4>
+                        <pre>{{ json_encode($requestResult->safety->need, JSON_PRETTY_PRINT) }}</pre>
+                    @endif
+                </section>
+            @endisset
         @endisset
     </main>
 </body>

@@ -17,8 +17,7 @@ class ScenarioInput
 
     public function validate(array $input): DeadlockScenario
     {
-        $encoded = json_encode($input);
-        abort_if($encoded === false || strlen($encoded) > self::MAX_PAYLOAD_BYTES, 413, 'El escenario excede el límite de 32 KiB.');
+        $this->checkPayloadSize($input);
 
         $n = $this->integer($input['n'] ?? null, 'n', 1, self::MAX_PROCESSES);
         $m = $this->integer($input['m'] ?? null, 'm', 1, self::MAX_RESOURCES);
@@ -35,6 +34,22 @@ class ScenarioInput
         }
 
         return new DeadlockScenario($n, $m, $allocation, $max, $available);
+    }
+
+    public function checkPayloadSize(array $input): void
+    {
+        $encoded = json_encode($input);
+        abort_if($encoded === false || strlen($encoded) > self::MAX_PAYLOAD_BYTES, 413, 'El escenario excede el límite de 32 KiB.');
+    }
+
+    public function processPosition(mixed $value, int $count): int
+    {
+        return $this->integer($value, 'process', 1, $count) - 1;
+    }
+
+    public function resourceVector(mixed $value, string $field, int $count): array
+    {
+        return $this->vector($this->decode($value, $field), $field, $count);
     }
 
     private function decode(mixed $value, string $field): mixed

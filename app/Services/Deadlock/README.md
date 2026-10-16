@@ -93,5 +93,44 @@ sin presentar el progreso parcial como una secuencia segura. Si no hay progreso,
 se muestra un mensaje sin filas inventadas. Se mantiene la lista de pendientes
 y la aclaración de que inseguridad no confirma interbloqueo.
 
-No se implementan solicitudes de recursos, grafos, ciclos, recuperación ni
-persistencia de simulaciones.
+No se implementan grafos, ciclos, recuperación ni persistencia de simulaciones.
+Las solicitudes se evalúan únicamente como simulación educativa, según el
+apartado siguiente.
+
+## Solicitudes adicionales de recursos (simulación educativa)
+
+POST `/interbloqueos/solicitudes` (`deadlocks.request`) recibe el escenario
+original más `process` (posición de 1 a n) y `request` (lista JSON o arreglo de
+exactamente m enteros). El formulario solo ofrece procesos del escenario ya
+validado. Los campos ocultos se consideran entrada no confiable: el backend
+valida de nuevo todo el escenario. Se mantienen los límites de 32 KiB, tipos
+numéricos canónicos y valores de 0 a 1,000,000. `ResourceRequestInput` reutiliza
+las reglas de `ScenarioInput` y devuelve un `ResourceRequest` inmutable con
+posición interna desde cero y vector normalizado, sin alterar su orden.
+
+`ResourceRequestEvaluator` recibe ambos objetos ya validados. Calcula Need con
+`NeedCalculator`, comprueba primero Request <= Need para todos los recursos y
+luego Request <= Available. Las decisiones de `ResourceRequestResult` son:
+
+- `invalid`: excede Need; no se intenta la asignación temporal.
+- `wait`: excede Available; debe esperar, sin ejecutar el analizador temporal.
+- `granted`: la copia temporal sigue siendo segura; solo se concede en la
+  simulación y se exponen el escenario temporal y su `SafetyResult`.
+- `unsafe`: la copia temporal es insegura; se deniega, sin exponer un escenario
+  concedido ni modificar el original. El resultado conserva el análisis temporal.
+
+La copia usa Available' = Available - Request y Allocation'[i] = Allocation[i]
++ Request. Max se conserva; `BankerSafetyAnalyzer` reutiliza `NeedCalculator`
+para obtener Need' = Need - Request y ejecuta el único algoritmo de seguridad
+existente. No se duplican sus reglas ni sus pasos. Un vector cero también se
+somete al análisis de seguridad. No se exige que el estado original sea seguro:
+se informa el resultado real del análisis temporal.
+
+Los errores de formato, dimensiones o proceso inexistente son solicitudes
+inválidas (HTTP 422); en HTML se conservan el análisis original, sus pasos y los
+valores recibidos con los mensajes. En JSON se devuelve el formato de errores
+422 de Laravel. Las cuatro decisiones de evaluación devuelven la vista con
+HTTP 200. En una concesión se presentan Allocation', Max, Available' y Need'
+en un bloque separado; los pasos y el análisis principal siguen correspondiendo
+al original. Cada nueva evaluación parte del escenario original, sin encadenar
+concesiones, guardar simulaciones ni asignar recursos reales del servidor.
