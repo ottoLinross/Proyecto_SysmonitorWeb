@@ -181,6 +181,7 @@
                     @endif
                 </section>
             @endisset
+            @include('deadlocks.partials.recovery')
         @endisset
     </main>
 </body>

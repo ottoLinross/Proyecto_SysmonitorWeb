@@ -93,7 +93,7 @@ sin presentar el progreso parcial como una secuencia segura. Si no hay progreso,
 se muestra un mensaje sin filas inventadas. Se mantiene la lista de pendientes
 y la aclaración de que inseguridad no confirma interbloqueo.
 
-No se implementan recuperación ni persistencia de simulaciones.
+La recuperación conceptual se describe en el apartado del Prompt 9; no se implementa persistencia de simulaciones.
 Las solicitudes se evalúan únicamente como simulación educativa, según el
 apartado siguiente.
 
@@ -209,4 +209,68 @@ el detector también admite grafos con solicitudes de varios procesos.
 Un ciclo con múltiples instancias no demuestra por sí solo un interbloqueo.
 El resultado no confirma interbloqueos y no sustituye la seguridad del banquero;
 la ausencia de ciclos tampoco convierte la instantánea en prueba de seguridad.
-No se implementan recuperación ni persistencia.
+La recuperación conceptual se describe a continuación; no se implementa persistencia.
+
+
+## Recuperación conceptual (Prompt 9)
+
+POST `/interbloqueos/recuperacion` (`deadlocks.recovery`) recibe el escenario
+original, `strategy` y, para finalización manual, `recovery_process` (1…n).
+`RecoveryInput` reutiliza los límites de `ScenarioInput`, incluidos 32 KiB y
+los números canónicos. `DeadlockScenarioRequest` conserva la validación del
+cuerpo original, CSRF y rechazo de archivos/multipart. Los campos ocultos se
+revalidan; no se confía en ellos. Los errores JSON reciben HTTP 422; los errores
+HTML de elección conservan el análisis original y muestran mensajes con escape.
+No se envía ninguna señal ni se utilizan servicios de control de procesos reales.
+
+`RecoveryChoice` y `RecoveryResult` son objetos inmutables. La lógica reside en
+`RecoverySimulator`, separado del controlador, y ofrece:
+
+- `terminate`: retira conceptualmente el proceso seleccionado y libera todas
+  las unidades de su fila Allocation. Permite explorar una elección manual.
+- `victim`: elige la mayor suma de unidades en Allocation, con desempate por
+  menor posición original. Ignora el selector manual. Es una heurística sencilla
+  para liberar más unidades, no un criterio óptimo: sumar tipos distintos no
+  mide su utilidad, costo ni prioridad y puede perjudicar un proceso útil.
+- `preemption`: explica la apropiación o retiro sin simularlo, pues el escenario
+  no describe qué recursos son apropiables ni cómo restaurar su consistencia.
+  Podría evitar finalizar un proceso, pero requiere puntos de control, rollback
+  o compensaciones; E/S y cambios parciales pueden ser irreversibles. Los retiros
+  repetidos pueden provocar inanición. No genera matrices, libera unidades ni
+  ejecuta un análisis de seguridad ficticio.
+
+Para las dos primeras estrategias se crea una copia `DeadlockScenario`: se
+eliminan las filas Allocation y Max de la víctima y se suma su Allocation a
+Available. Los demás procesos y sus demandas se conservan en orden; la cantidad
+total de unidades por tipo (asignadas + disponibles) no cambia. El proceso
+retirado no forma parte de los pendientes ni de la secuencia temporal. Finalizar
+conceptualmente puede perder trabajo y exigir reinicio o compensación; no se
+garantiza que los supervivientes queden en estado seguro.
+
+Se reutiliza `BankerSafetyAnalyzer` sobre la copia para obtener `SafetyResult`,
+Need y la secuencia o los pendientes temporales. `RecoveryResult::activeProcesses`
+traduce cada índice temporal a la posición original desde cero, de modo que
+retirar P1 no renombra P2 como P1. La vista identifica las filas con esas etiquetas
+originales. Si se retira el último proceso se permite **solo internamente** un
+escenario de n=0, matrices vacías y todos los recursos liberados: el analizador
+existente devuelve seguridad con secuencia, pasos y pendientes vacíos. El
+contrato público de `ScenarioInput` sigue exigiendo al menos un proceso.
+Available temporal puede superar 1,000,000 al sumar unidades previamente
+asignadas; el límite sigue aplicándose a la entrada original, no a esa suma.
+
+La interfaz presenta unidades liberadas, Allocation, Max, Available y Need
+simuladas, orden de las filas y seguridad temporal. Conserva las matrices,
+seguridad, pasos, `ResourceGraph` y `ResourceCycleResult` **originales**.
+Si hay una Request explícita válida en la página, el formulario conserva su
+contexto y el servidor vuelve a validar y evaluar ese mismo vector para mostrar
+su decisión, grafo y ciclo sin alterarlos. Recuperación parte siempre del
+escenario original, no del estado concedido en la simulación de Request; tampoco
+encadena ensayos de recuperación. No se inventan solicitudes activas ni se
+reclasifica la solicitud del proceso retirado en el análisis original.
+
+Estas opciones son educativas y voluntarias, incluso en estados seguros.
+Inseguridad del banquero no equivale a interbloqueo confirmado. Un ciclo con
+múltiples instancias tampoco lo confirma; su ausencia no prueba seguridad.
+La recuperación no se presenta como obligatoria ni como solución garantizada.
+No se ejecutan acciones sobre el sistema operativo, no se guarda el resultado,
+no se modifica la base de datos y no se implementan los Prompts 10, 11 o 12.
