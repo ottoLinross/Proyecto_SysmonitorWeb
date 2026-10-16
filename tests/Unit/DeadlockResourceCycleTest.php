@@ -49,6 +49,29 @@ class DeadlockResourceCycleTest extends TestCase
         }
     }
 
+    public function test_maximum_public_graph_stays_bounded_and_reconstructs_only_existing_edges(): void
+    {
+        $input = new ScenarioInput;
+        $scenario = $input->validate([
+            'n' => 20, 'm' => 20,
+            'allocation' => array_fill(0, 20, array_fill(0, 20, 1)),
+            'max' => array_fill(0, 20, array_fill(0, 20, ScenarioInput::MAX_VALUE)),
+            'available' => array_fill(0, 20, 1),
+        ]);
+        $request = (new ResourceRequestInput($input))->validate(['process' => 1, 'request' => array_fill(0, 20, 1)], $scenario);
+        $graph = (new ResourceGraphBuilder(new NeedCalculator))->build($scenario, $request);
+        $this->assertCount(40, $graph->nodes);
+        $this->assertCount(820, $graph->edges);
+        $this->assertSame(ScenarioInput::MAX_VALUE - 1, $graph->edges[1]['quantity']);
+        $detector = new ResourceCycleDetector;
+        $result = $detector->detect($graph);
+        $this->assertSame(['P1', 'R1', 'P1'], $result->path);
+        foreach (array_slice($result->path, 1) as $i => $target) {
+            $this->assertNotEmpty(array_filter($graph->edges, fn ($edge) => $edge['source'] === $result->path[$i] && $edge['target'] === $target && in_array($edge['type'], ['allocation', 'request'], true)));
+        }
+        $this->assertEquals($result, $detector->detect($graph));
+    }
+
     public function test_reuses_builder_and_validated_scenario_with_multiple_instances(): void
     {
         $input = new ScenarioInput;

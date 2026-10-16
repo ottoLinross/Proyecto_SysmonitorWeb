@@ -10,6 +10,7 @@ use App\Services\Deadlock\ScenarioInput;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -243,6 +244,56 @@ class DeadlockHistoryTest extends TestCase
     {
         $this->view('deadlocks.history-message', ['message' => '<script>alert(1)</script>'])
             ->assertSee('&lt;script&gt;', false)->assertDontSee('<script>', false);
+    }
+
+    public function test_malformed_stored_timestamp_does_not_break_history_or_render_html(): void
+    {
+        $saved = $this->app->make(DeadlockSimulationStore::class)->save($this->data());
+        DeadlockSimulation::query()->whereKey($saved->id)->update(['created_at' => '<script>private-invalid-date</script>']);
+        $this->get('/interbloqueos/historial')->assertOk()
+            ->assertSee('&lt;script&gt;', false)->assertDontSee('<script>', false)
+            ->assertDontSee('Stack trace', false);
+    }
+
+    public static function corruptScenarios(): iterable
+    {
+        yield 'invalid JSON syntax' => ['allocation', '['];
+        yield 'object matrix' => ['max', '{"0":[3,2],"1":[2,1],"2":[1,2]}'];
+        yield 'nested vector' => ['available', '[[0],1]'];
+        yield 'boolean vector' => ['available', '[false,1]'];
+        yield 'negative vector' => ['available', '[-1,1]'];
+        yield 'decimal vector' => ['available', '[0.0,1]'];
+        yield 'null vector' => ['available', 'null'];
+        yield 'out of bounds dimensions' => ['n', 21];
+    }
+
+    #[DataProvider('corruptScenarios')]
+    public function test_corrupt_stored_scenarios_never_reach_analysis(string $field, mixed $value): void
+    {
+        $saved = $this->app->make(DeadlockSimulationStore::class)->save($this->data());
+        DeadlockSimulation::query()->whereKey($saved->id)->update([$field => $value]);
+        $before = $saved->fresh()->getRawOriginal();
+        $this->mock(BankerSafetyAnalyzer::class)->shouldNotReceive('analyze');
+        $this->get('/interbloqueos/historial/'.$saved->id)->assertUnprocessable()
+            ->assertSeeText('contiene un escenario inválido')->assertDontSee('SQLSTATE', false);
+        $this->assertSame($before, $saved->fresh()->getRawOriginal());
+    }
+
+    public function test_missing_sqlite_file_does_not_expose_its_path_even_in_debug_mode(): void
+    {
+        $privatePath = '/tmp/sysmonitor-m4-missing-'.bin2hex(random_bytes(12)).'.sqlite';
+        $this->assertFileDoesNotExist($privatePath);
+        config(['app.debug' => true, 'database.connections.sqlite.database' => $privatePath]);
+        DB::purge('sqlite');
+        try {
+            $this->get('/interbloqueos/historial')->assertStatus(503)->assertDontSee($privatePath, false);
+            $this->get('/interbloqueos/historial/1')->assertStatus(503)->assertDontSee($privatePath, false);
+            $this->post('/interbloqueos/historial', $this->data())->assertStatus(503)->assertDontSee($privatePath, false);
+        } finally {
+            DB::purge('sqlite');
+            config(['database.connections.sqlite.database' => ':memory:']);
+        }
+        $this->assertFileDoesNotExist($privatePath);
     }
 
     public function test_maximum_dimensions_and_values_round_trip_without_losing_order(): void

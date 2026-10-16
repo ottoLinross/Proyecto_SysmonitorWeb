@@ -338,3 +338,46 @@ una migración fresh, se reutiliza el bootstrap de pruebas existente:
 `php artisan test --bootstrap=tests/Support/SchedulingSqliteBootstrap.php`.
 Este bootstrap verifica `testing` y SQLite en memoria y prepara sus migraciones
 con `migrate`; no usa la base local de desarrollo.
+
+## Auditoría de seguridad de M4 (Prompt 11)
+
+Se corrigieron tres casos reproducidos con pruebas: el fallback HTTP podía
+aceptar datos de la URL ya recortados por el middleware en lugar del cuerpo
+original; `parse_str` podía truncar formularios y emitir advertencias al exceder
+los límites de PHP; una fecha corrupta almacenada podía causar una excepción al
+listar registros. Ahora se exige Content-Type JSON (también application/*+json)
+o URL-encoded, sin distinguir mayúsculas en el tipo MIME; no se mezclan parámetros
+de la URL con el escenario. Las advertencias del parser se convierten en HTTP 422
+sin detalles internos, restaurando el manejador previo en `finally`. El listado
+presenta la fecha almacenada como texto escapado, sin intentar interpretar datos
+posiblemente corruptos. Los límites de cuerpo de 32 KiB siguen produciendo 413.
+
+Verificaciones sin cambios innecesarios en algoritmos, modelo o esquema:
+
+- ScenarioInput y entradas de Request/recuperación rechazan valores negativos,
+  decimales, booleanos, cadenas ambiguas, listas irregulares, objetos JSON y
+  anidación incorrecta. Allocation <= Max mantiene Need entre 0 y 1,000,000;
+  Request se valida antes de compararla con Need y Available. Las sumas internas
+  de recursos liberados pueden superar el límite de entrada sin ser entradas
+  inválidas ni crear unidades nuevas.
+- Las cuatro rutas POST mantienen CSRF; las pruebas fuerzan la comprobación de
+  tokens ausentes e incorrectos, además de cargas excesivas y tamaños declarados.
+  Se conserva el escape Blade de formularios, matrices, errores y recorridos.
+- Los escenarios públicos tienen hasta 40 nodos y 820 aristas agregadas. DFS
+  conserva su complejidad O(V+E), excluye Need y devuelve solo recorridos cerrados
+  con aristas existentes; se prueba el máximo público sin expandir instancias.
+  Estos servicios internos reciben objetos validados, no grafos enviados por HTTP.
+- Eloquent mantiene la asignación masiva bloqueada y las consultas parametrizadas.
+  Los identificadores inválidos no ejecutan consultas; los registros guardados
+  se revalidan desde su JSON original antes de analizarlos. Las pruebas incluyen
+  JSON corrupto, objetos, null, decimales, valores negativos y dimensiones fuera
+  de rango, sin reescribir los registros rechazados.
+- Los errores de consultas y la ausencia real del archivo SQLite producen 503
+  sin SQL ni rutas internas, incluso con debug activo. No fue necesario cambiar
+  el manejo de errores de almacenamiento existente.
+- Solicitudes, recuperación, grafo y ciclos permanecen exclusivamente educativos;
+  no se añaden llamadas a controles de procesos reales ni se cambia la decisión
+  del banquero. No se encontraron razones para modificar esos algoritmos.
+
+La auditoría y las pruebas usan exclusivamente el entorno de pruebas SQLite;
+no se aplican migraciones a desarrollo ni se incorporan tareas del Prompt 12.

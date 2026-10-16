@@ -21,7 +21,7 @@
                         @foreach ($simulations as $simulation)
                             <tr>
                                 <th scope="row"><a href="{{ route('deadlocks.history.show', $simulation->id) }}">Simulación #{{ $simulation->id }}</a></th>
-                                <td>{{ $simulation->n }}</td><td>{{ $simulation->m }}</td><td>{{ $simulation->created_at?->utc()->format('Y-m-d H:i:s') }}</td>
+                                <td>{{ $simulation->n }}</td><td>{{ $simulation->m }}</td><td>{{ $simulation->getRawOriginal('created_at') ?? 'No disponible' }}</td>
                             </tr>
                         @endforeach
                     </tbody>
