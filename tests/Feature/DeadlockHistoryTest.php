@@ -40,6 +40,70 @@ class DeadlockHistoryTest extends TestCase
         return ['n' => '3', 'm' => '2', 'allocation' => '[[1,2],[2,0],[0,1]]', 'max' => '[[3,2],[2,1],[1,2]]', 'available' => '[0,1]'];
     }
 
+    public function test_complete_workflow_uses_rendered_forms_and_persists_only_original_scenarios(): void
+    {
+        $this->app->bind(ValidateCsrfToken::class, fn ($app) => new class($app, $app['encrypter']) extends ValidateCsrfToken
+        {
+            protected function runningUnitTests()
+            {
+                return false;
+            }
+        });
+        $hiddenFields = function ($response, string $routeName): array {
+            $document = new \DOMDocument;
+            $document->loadHTML($response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+            $nodes = (new \DOMXPath($document))->query('//form[@action="'.route($routeName).'"]//input[@type="hidden"]');
+            $this->assertGreaterThan(0, $nodes->length);
+            $fields = [];
+            foreach ($nodes as $node) {
+                $fields[$node->getAttribute('name')] = $node->getAttribute('value');
+            }
+            $this->assertSame('workflow-csrf-token', $fields['_token']);
+
+            return $fields;
+        };
+
+        $validated = $this->withSession(['_token' => 'workflow-csrf-token'])->post('/interbloqueos', [
+            '_token' => 'workflow-csrf-token', 'n' => 2, 'm' => 1,
+            'allocation' => [[1], [1]], 'max' => [[3], [2]], 'available' => [1],
+        ])->assertOk()->assertViewHas('need', [[2], [1]])
+            ->assertViewHas('safety', fn ($result) => $result->safeSequence === [1, 0]);
+        $this->post('/interbloqueos/historial', $hiddenFields($validated, 'deadlocks.history.store'))
+            ->assertRedirect('/interbloqueos/historial/1');
+        $first = DeadlockSimulation::query()->sole();
+        $before = $first->getRawOriginal();
+        $detail = $this->get('/interbloqueos/historial/1')->assertOk()
+            ->assertViewHas('safety', fn ($result) => $result->safeSequence === [1, 0] && count($result->steps) === 2);
+
+        $requestFields = $hiddenFields($detail, 'deadlocks.request') + ['process' => 2, 'request' => '[1]'];
+        $requested = $this->post('/interbloqueos/solicitudes', $requestFields)->assertOk()
+            ->assertViewHas('requestResult', fn ($result) => $result->decision === 'granted' && $result->simulated->available === [0])
+            ->assertViewHas('cycleResult', fn ($result) => $result->path === ['P2', 'R1', 'P2'])
+            ->assertSeeText('no demuestra por sí solo un interbloqueo');
+        $recoveryFields = $hiddenFields($requested, 'deadlocks.recovery') + ['strategy' => 'terminate', 'recovery_process' => 2];
+        $this->assertSame('2', $recoveryFields['process']);
+        $this->assertSame('[1]', $recoveryFields['request']);
+        $recovered = $this->post('/interbloqueos/recuperacion', $recoveryFields)->assertOk()
+            ->assertSeeText('Secuencia segura temporal: P1.')
+            ->assertViewHas('requestResult', fn ($result) => $result->decision === 'granted')
+            ->assertViewHas('cycleResult', fn ($result) => $result->path === ['P2', 'R1', 'P2'])
+            ->assertViewHas('recoveryResult', fn ($result) => $result->activeProcesses === [0] && $result->released === [1] && $result->simulated->available === [2]);
+        $saveFields = $hiddenFields($recovered, 'deadlocks.history.store');
+        $this->assertSame('[[1],[1]]', $saveFields['allocation']);
+        $this->assertSame('[1]', $saveFields['available']);
+        $this->assertArrayNotHasKey('request', $saveFields);
+        $this->post('/interbloqueos/historial', $saveFields)->assertRedirect('/interbloqueos/historial/2');
+        $this->assertDatabaseCount('deadlock_simulations', 2, 'sqlite');
+        $this->assertSame($before, $first->fresh()->getRawOriginal());
+        $this->get('/interbloqueos/historial')->assertOk()
+            ->assertSeeInOrder(['Simulación #2', 'Simulación #1']);
+        $this->get('/interbloqueos/historial/2')->assertOk()
+            ->assertViewHas('scenario', fn ($scenario) => $scenario->allocation === [[1], [1]] && $scenario->available === [1])
+            ->assertViewHas('safety', fn ($result) => $result->safeSequence === [1, 0])
+            ->assertViewHas('cycleResult', fn ($result) => $result->status === 'no_request')
+            ->assertViewMissing('requestResult')->assertViewMissing('recoveryResult');
+    }
+
     public function test_schema_and_model_are_dedicated_to_sqlite_and_guard_mass_assignment(): void
     {
         $this->assertSame(['id', 'n', 'm', 'allocation', 'max', 'available', 'created_at', 'updated_at'], Schema::connection('sqlite')->getColumnListing('deadlock_simulations'));
