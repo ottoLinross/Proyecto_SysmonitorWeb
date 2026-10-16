@@ -1,12 +1,45 @@
 # Servicios de interbloqueos (M4)
 
-Directorio reservado para los futuros servicios del módulo Interbloqueos,
-bajo el namespace `App\Services\Deadlock`, independiente de los servicios
-de sistema y planificación.
+`ScenarioInput::validate(array $input)` valida el escenario y devuelve un
+`DeadlockScenario` inmutable con `n`, `m`, `allocation`, `max` y `available`.
+Los servicios están separados de sistema y planificación y no acceden a BD.
 
-Este paso solo establece la estructura inicial. No incluye entrada de matrices,
-matriz Need, algoritmo del banquero, solicitudes de recursos, grafo de asignación,
-detección de ciclos, recuperación ni persistencia SQLite.
+## Contrato de entrada y límites
 
-El controlador inicial únicamente devuelve la vista `deadlocks.index` y no
-requiere servicios ni acceso a base de datos.
+- `n`: de 1 a 20 procesos; `m`: de 1 a 20 tipos de recursos.
+- Valores: de 0 a 1,000,000, incluidos ambos extremos.
+- Allocation y Max: listas consecutivas de exactamente n filas, cada una con
+  exactamente m valores. Available: lista consecutiva de exactamente m valores.
+- Se aceptan enteros PHP o cadenas decimales canónicas (`0` o dígitos sin cero
+  inicial). Se rechazan flotantes, booleanos, null, signos, espacios dentro de
+  cadenas numéricas, notación exponencial y ceros iniciales. Los espacios de
+  formato entre elementos JSON sí se permiten.
+- Cada celda Allocation debe ser menor o igual a la celda correspondiente Max.
+- No se ordenan ni reindexan listas irregulares: se rechazan. Los índices de
+  mensajes de campo son de base cero; los mensajes de comparación indican
+  proceso y recurso desde uno.
+- Cada matriz/vector puede llegar como arreglo o como texto JSON. Los objetos
+  JSON no son listas, incluso cuando tienen claves numéricas.
+- Límite: 32 KiB (32,768 bytes) para el cuerpo HTTP y para la representación
+  JSON de la entrada del servicio, incluidos campos adicionales. La codificación
+  del formulario puede ocupar más que su texto visible. Se comprueba antes de
+  decodificar las matrices; se rechaza con HTTP 413, sin guardar old input.
+  Este límite complementa los límites del servidor/PHP, no evita que estos
+  reciban o procesen inicialmente el cuerpo HTTP.
+
+## Interfaz HTTP
+
+GET `/interbloqueos` muestra el formulario. POST `/interbloqueos` valida y
+muestra el escenario normalizado, sin persistirlo. El formulario usa listas
+JSON en textareas, sin JavaScript. La ruta conserva el middleware web y CSRF.
+Se aceptan formularios `application/x-www-form-urlencoded` y objetos
+`application/json`; multipart y archivos no están soportados.
+
+`DeadlockScenarioRequest` recupera el cuerpo original antes de entregar los
+datos al servicio para que el recorte global de espacios no acepte cadenas
+numéricas ambiguas. Los errores de validación regresan al formulario con
+mensajes y valores anteriores; solicitudes JSON reciben errores HTTP 422.
+El servicio informa el primer error encontrado para limitar el trabajo.
+
+No se calcula Need ni se implementan banquero, secuencia segura, solicitudes,
+grafos, ciclos, recuperación o persistencia de simulaciones.

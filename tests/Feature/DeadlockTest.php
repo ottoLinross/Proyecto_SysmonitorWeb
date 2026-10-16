@@ -32,14 +32,14 @@ class DeadlockTest extends TestCase
             ->assertSeeText('SysMonitor · M4')
             ->assertSee('<h1>Interbloqueos</h1>', false)
             ->assertSeeText('Estructura inicial del módulo de interbloqueos.')
-            ->assertDontSee('<form', false)
-            ->assertDontSee('<input', false)
+            ->assertSee('<form', false)
+            ->assertSee('name="_token"', false)
             ->assertDontSee('<table', false)
             ->assertDontSee('<script', false);
     }
 
-    public function test_initial_module_does_not_accept_post_requests(): void
+    public function test_module_rejects_missing_scenario(): void
     {
-        $this->post('/interbloqueos')->assertStatus(405);
+        $this->post('/interbloqueos')->assertSessionHasErrors('n');
     }
 }

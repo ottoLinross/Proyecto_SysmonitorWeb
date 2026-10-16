@@ -14,6 +14,7 @@ Route::get('/', function () {
 
 Route::get('/procesos', [ProcessController::class, 'index'])->name('processes.index');
 Route::get('/interbloqueos', [DeadlockController::class, 'index'])->name('deadlocks.index');
+Route::post('/interbloqueos', [DeadlockController::class, 'validateScenario'])->name('deadlocks.validate');
 Route::get('/planificacion', [SchedulingController::class, 'index'])->name('scheduling.index');
 Route::post('/planificacion/manual', [SchedulingController::class, 'manual'])->name('scheduling.manual');
 Route::post('/planificacion/aleatoria', [SchedulingController::class, 'random'])->name('scheduling.random');
