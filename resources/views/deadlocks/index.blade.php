@@ -71,6 +71,9 @@
                 <pre>{{ json_encode($scenario->max, JSON_PRETTY_PRINT) }}</pre>
                 <h3>Available</h3>
                 <pre>{{ json_encode($scenario->available, JSON_PRETTY_PRINT) }}</pre>
+                <h3>Need — Matriz de necesidad</h3>
+                <p>Need[i][j] = Max[i][j] - Allocation[i][j]</p>
+                <pre>{{ json_encode($need, JSON_PRETTY_PRINT) }}</pre>
             </section>
         @endisset
     </main>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\DeadlockScenarioRequest;
+use App\Services\Deadlock\NeedCalculator;
 use App\Services\Deadlock\ScenarioInput;
 use Illuminate\View\View;
 
@@ -13,8 +14,13 @@ class DeadlockController extends Controller
         return view('deadlocks.index');
     }
 
-    public function validateScenario(DeadlockScenarioRequest $request, ScenarioInput $input): View
+    public function validateScenario(DeadlockScenarioRequest $request, ScenarioInput $input, NeedCalculator $calculator): View
     {
-        return view('deadlocks.index', ['scenario' => $input->validate($request->scenarioInput())]);
+        $scenario = $input->validate($request->scenarioInput());
+
+        return view('deadlocks.index', [
+            'scenario' => $scenario,
+            'need' => $calculator->calculate($scenario),
+        ]);
     }
 }

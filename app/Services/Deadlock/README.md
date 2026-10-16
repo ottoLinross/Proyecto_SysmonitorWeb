@@ -41,5 +41,18 @@ numéricas ambiguas. Los errores de validación regresan al formulario con
 mensajes y valores anteriores; solicitudes JSON reciben errores HTTP 422.
 El servicio informa el primer error encontrado para limitar el trabajo.
 
-No se calcula Need ni se implementan banquero, secuencia segura, solicitudes,
+## Matriz de necesidad (Need)
+
+`NeedCalculator::calculate(DeadlockScenario $scenario)` recibe un escenario ya
+validado por `ScenarioInput` y devuelve una lista de n filas con m enteros por
+fila, mediante `Need[i][j] = Max[i][j] - Allocation[i][j]`. Conserva el orden
+de procesos y recursos, no modifica el escenario y no mantiene estado.
+No repite validaciones: depende del contrato del Prompt 2, incluida la condición
+Allocation <= Max. El cálculo cuesta O(n*m) en tiempo y espacio de salida.
+
+POST `/interbloqueos` calcula Need solo después de validar y la muestra junto
+a las matrices del escenario, con el mismo formato JSON de presentación.
+La pantalla inicial y las entradas rechazadas no muestran resultados Need.
+
+No se implementan banquero, secuencia segura, solicitudes,
 grafos, ciclos, recuperación o persistencia de simulaciones.
