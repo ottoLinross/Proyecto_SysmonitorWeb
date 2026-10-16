@@ -74,6 +74,20 @@
                 <h3>Need — Matriz de necesidad</h3>
                 <p>Need[i][j] = Max[i][j] - Allocation[i][j]</p>
                 <pre>{{ json_encode($need, JSON_PRETTY_PRINT) }}</pre>
+                <h3>Análisis de seguridad</h3>
+                <p>Los procesos se identifican por su posición original, desde P1.</p>
+                @if ($safety->isSafe)
+                    <p>Estado seguro</p>
+                    <p>Secuencia segura:
+                        {{ implode(' → ', array_map(static fn ($i) => 'P'.($i + 1), $safety->safeSequence)) }}
+                    </p>
+                @else
+                    <p>Estado inseguro</p>
+                    <p>Procesos que no pudieron finalizar:
+                        {{ implode(', ', array_map(static fn ($i) => 'P'.($i + 1), $safety->unfinished)) }}
+                    </p>
+                    <p>Un estado inseguro no confirma por sí solo la existencia de un interbloqueo.</p>
+                @endif
             </section>
         @endisset
     </main>

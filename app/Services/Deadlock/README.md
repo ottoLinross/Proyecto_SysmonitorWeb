@@ -54,5 +54,26 @@ POST `/interbloqueos` calcula Need solo después de validar y la muestra junto
 a las matrices del escenario, con el mismo formato JSON de presentación.
 La pantalla inicial y las entradas rechazadas no muestran resultados Need.
 
-No se implementan banquero, secuencia segura, solicitudes,
-grafos, ciclos, recuperación o persistencia de simulaciones.
+## Algoritmo de seguridad del banquero
+
+`BankerSafetyAnalyzer::analyze(DeadlockScenario $scenario)` recibe el escenario
+validado y utiliza `NeedCalculator` una sola vez. Inicializa Work con Available
+y Finish con false. En cada iteración selecciona el primer proceso pendiente
+en orden original que satisface Need <= Work en todos los recursos. Al terminar
+lo marca y suma su Allocation a Work; reinicia la búsqueda desde la primera
+posición. Se detiene cuando todos terminan o ningún pendiente puede terminar.
+
+Devuelve un `SafetyResult` inmutable con Need, `isSafe`, `safeSequence`,
+`completed`, `unfinished`, Work final y Finish final. Las posiciones son índices
+desde cero; la vista las presenta como P1, P2, etc. `safeSequence` es null en
+estado inseguro, aunque `completed` puede contener una ejecución parcial.
+`unfinished` conserva el orden original. Un estado inseguro no confirma un
+interbloqueo. No se enumeran todas las secuencias posibles.
+
+El análisis no modifica el escenario ni guarda estado entre llamadas. Su coste
+máximo es O(n²*m) en tiempo y O(n*m) en espacio, incluida Need. El controlador
+reutiliza Need del resultado para su presentación y muestra el estado y la
+secuencia segura o los procesos pendientes después de una validación exitosa.
+
+No se implementan solicitudes de recursos, grafos, ciclos, recuperación ni
+persistencia de simulaciones.
