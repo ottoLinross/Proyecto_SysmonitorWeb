@@ -29,6 +29,13 @@
         <header>
             <p>SysMonitor · M4</p>
             <h1>Interbloqueos</h1>
+            <nav aria-label="Historial de M4"><a href="{{ route('deadlocks.history.index') }}">Simulaciones guardadas</a></nav>
+            @if (session('deadlockSaved'))
+                <p role="status">{{ session('deadlockSaved') }}</p>
+            @endif
+            @isset($savedSimulation)
+                <p>Simulación guardada #{{ $savedSimulation->id }}. Resultados recalculados desde el escenario validado.</p>
+            @endisset
             <p>Estructura inicial del módulo de interbloqueos.</p>
         </header>
         @php
@@ -182,6 +189,7 @@
                 </section>
             @endisset
             @include('deadlocks.partials.recovery')
+            @include('deadlocks.partials.save-simulation')
         @endisset
     </main>
 </body>

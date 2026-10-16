@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CpuMemoryController;
 use App\Http\Controllers\DeadlockController;
+use App\Http\Controllers\DeadlockHistoryController;
 use App\Http\Controllers\DeadlockRecoveryController;
 use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\SchedulingController;
@@ -18,6 +19,9 @@ Route::get('/interbloqueos', [DeadlockController::class, 'index'])->name('deadlo
 Route::post('/interbloqueos', [DeadlockController::class, 'validateScenario'])->name('deadlocks.validate');
 Route::post('/interbloqueos/solicitudes', [DeadlockController::class, 'evaluateRequest'])->name('deadlocks.request');
 Route::post('/interbloqueos/recuperacion', [DeadlockRecoveryController::class, 'simulate'])->name('deadlocks.recovery');
+Route::post('/interbloqueos/historial', [DeadlockHistoryController::class, 'store'])->name('deadlocks.history.store');
+Route::get('/interbloqueos/historial', [DeadlockHistoryController::class, 'index'])->name('deadlocks.history.index');
+Route::get('/interbloqueos/historial/{id}', [DeadlockHistoryController::class, 'show'])->name('deadlocks.history.show');
 Route::get('/planificacion', [SchedulingController::class, 'index'])->name('scheduling.index');
 Route::post('/planificacion/manual', [SchedulingController::class, 'manual'])->name('scheduling.manual');
 Route::post('/planificacion/aleatoria', [SchedulingController::class, 'random'])->name('scheduling.random');

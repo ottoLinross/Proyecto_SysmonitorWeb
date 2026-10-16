@@ -2,7 +2,8 @@
 
 `ScenarioInput::validate(array $input)` valida el escenario y devuelve un
 `DeadlockScenario` inmutable con `n`, `m`, `allocation`, `max` y `available`.
-Los servicios están separados de sistema y planificación y no acceden a BD.
+Los servicios están separados de sistema y planificación. Solo el almacenamiento
+educativo del Prompt 10 accede a SQLite; los cálculos permanecen en memoria.
 
 ## Contrato de entrada y límites
 
@@ -93,7 +94,7 @@ sin presentar el progreso parcial como una secuencia segura. Si no hay progreso,
 se muestra un mensaje sin filas inventadas. Se mantiene la lista de pendientes
 y la aclaración de que inseguridad no confirma interbloqueo.
 
-La recuperación conceptual se describe en el apartado del Prompt 9; no se implementa persistencia de simulaciones.
+La recuperación conceptual y la persistencia educativa se describen en los apartados de los Prompts 9 y 10.
 Las solicitudes se evalúan únicamente como simulación educativa, según el
 apartado siguiente.
 
@@ -209,7 +210,7 @@ el detector también admite grafos con solicitudes de varios procesos.
 Un ciclo con múltiples instancias no demuestra por sí solo un interbloqueo.
 El resultado no confirma interbloqueos y no sustituye la seguridad del banquero;
 la ausencia de ciclos tampoco convierte la instantánea en prueba de seguridad.
-La recuperación conceptual se describe a continuación; no se implementa persistencia.
+La recuperación conceptual y el guardado explícito de escenarios se describen a continuación.
 
 
 ## Recuperación conceptual (Prompt 9)
@@ -272,5 +273,68 @@ Estas opciones son educativas y voluntarias, incluso en estados seguros.
 Inseguridad del banquero no equivale a interbloqueo confirmado. Un ciclo con
 múltiples instancias tampoco lo confirma; su ausencia no prueba seguridad.
 La recuperación no se presenta como obligatoria ni como solución garantizada.
-No se ejecutan acciones sobre el sistema operativo, no se guarda el resultado,
-no se modifica la base de datos y no se implementan los Prompts 10, 11 o 12.
+No se ejecutan acciones sobre el sistema operativo, no se guarda el resultado de recuperación. El guardado explícito del escenario
+original se describe a continuación; no se implementan los Prompts 11 o 12.
+
+
+## Persistencia educativa con SQLite (Prompt 10)
+
+Migración nueva: `2026_10_16_000000_create_deadlock_simulations_table.php`.
+Crea exclusivamente `deadlock_simulations`, mediante la conexión Laravel `sqlite`
+configurada en el proyecto. No modifica tablas ni migraciones históricas de otros
+módulos. **La migración de desarrollo queda pendiente de aplicación manual tras
+revisión y autorización**; no se aplica automáticamente desde ninguna ruta.
+No es necesario cambiar `.env` ni instalar dependencias.
+
+La tabla contiene `id`, `n`, `m`, `allocation`, `max`, `available`, `created_at`
+y `updated_at`. Las matrices y el vector se guardan como JSON ordenado, con los
+casts de arreglo del modelo dedicado `DeadlockSimulation`. SQLite conserva estos
+campos JSON como texto. No se guardan Need, seguridad, pasos, ciclos, Request,
+recuperaciones, datos reales de procesos, credenciales ni campos extra enviados.
+El modelo bloquea asignación masiva; `DeadlockSimulationStore::save` valida toda
+la entrada con `ScenarioInput` y asigna únicamente los cinco campos permitidos.
+Cada guardado inserta un registro nuevo; no hay rutas de actualización o borrado.
+Se conserva el límite de entrada de 32 KiB, dimensiones 1…20, valores 0…1,000,000,
+formato numérico canónico y Allocation <= Max, también para campos ocultos.
+
+Rutas de M4:
+
+- POST `/interbloqueos/historial` (`deadlocks.history.store`): recibe el escenario
+  original, protegido por el middleware web y CSRF; vuelve a validarlo, inserta
+  mediante Eloquent y redirige al detalle con mensaje de guardado.
+- GET `/interbloqueos/historial` (`deadlocks.history.index`): lista paginada de
+  20 registros, en orden de identificador descendente; muestra un mensaje vacío
+  cuando no hay registros. Las fechas del listado se indican explícitamente en UTC.
+- GET `/interbloqueos/historial/{id}` (`deadlocks.history.show`): acepta únicamente
+  identificadores positivos canónicos dentro del rango entero de SQLite de 64
+  bits. Rechaza ceros iniciales, signos, decimales, texto y desbordamientos antes
+  de consultar. Identificadores inválidos o inexistentes reciben HTTP 404 con
+  mensaje claro. Las consultas usan Eloquent y parámetros, no SQL concatenado.
+
+Al recuperar un registro, `DeadlockSimulationStore::reconstruct` pasa sus valores
+originales a `ScenarioInput`, incluido el JSON sin casts, para seguir rechazando
+objetos donde se exigen listas. El controlador reutiliza `BankerSafetyAnalyzer`
+para recalcular Need, seguridad y pasos, y los servicios de grafo y ciclos sobre
+el escenario reconstruido. No confía en resultados guardados ni los requiere.
+Un registro que no supera la validación no se analiza ni se reescribe: se muestra
+un mensaje HTTP 422; el límite de tamaño sigue produciendo HTTP 413.
+La indisponibilidad de SQLite o de la tabla devuelve un mensaje HTTP 503 sin
+exponer consultas. Consultar registros no actualiza matrices ni timestamps.
+
+La página de detalle conserva formularios de solicitudes y recuperación para
+realizar nuevos ensayos temporales; no reconstruye solicitudes activas a partir
+de Need. El guardado explícito siempre usa el escenario original mostrado,
+incluso después de una solicitud o recuperación simulada. No encadena ni guarda
+esas copias. Los valores se presentan con escape Blade. Guardar de nuevo desde
+un detalle crea otro registro, sin modificar el anterior.
+
+Las pruebas de persistencia usan SQLite `:memory:` en el entorno `testing`,
+verifican la conexión efectiva antes de migrar y aplican únicamente la migración
+nueva de M4, sin refrescar ni limpiar bases existentes. Cubren validación,
+normalización, orden, recalculado, CSRF, paginación, aislamiento, inmutabilidad,
+registros inválidos/inexistentes y fallos de almacenamiento. Para ejecutar la
+suite completa sin que los tests antiguos que usan RefreshDatabase soliciten
+una migración fresh, se reutiliza el bootstrap de pruebas existente:
+`php artisan test --bootstrap=tests/Support/SchedulingSqliteBootstrap.php`.
+Este bootstrap verifica `testing` y SQLite en memoria y prepara sus migraciones
+con `migrate`; no usa la base local de desarrollo.
