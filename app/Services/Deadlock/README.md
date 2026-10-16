@@ -93,7 +93,7 @@ sin presentar el progreso parcial como una secuencia segura. Si no hay progreso,
 se muestra un mensaje sin filas inventadas. Se mantiene la lista de pendientes
 y la aclaración de que inseguridad no confirma interbloqueo.
 
-No se implementan detección de ciclos, recuperación ni persistencia de simulaciones.
+No se implementan recuperación ni persistencia de simulaciones.
 Las solicitudes se evalúan únicamente como simulación educativa, según el
 apartado siguiente.
 
@@ -142,7 +142,7 @@ concesiones, guardar simulaciones ni asignar recursos reales del servidor.
 recibe objetos previamente validados por `ScenarioInput` y `ResourceRequestInput`.
 Reutiliza `NeedCalculator` y devuelve un `ResourceGraph` inmutable con listas de
 nodos (`id`, `type`) y aristas (`source`, `target`, `type`, `quantity`). No modifica
-el escenario ni evalúa seguridad o ciclos. Su tiempo y espacio son O(n*m).
+el escenario ni evalúa seguridad o ciclos; la detección se delega al servicio independiente descrito abajo. Su tiempo y espacio son O(n*m).
 
 Los nodos se ordenan P1…Pn y luego R1…Rm, numéricamente. Cada R es un tipo de
 recurso, sin crear nodos para instancias individuales. Sus atributos `available`
@@ -172,4 +172,41 @@ Una Request mal formada no crea aristas explícitas; el grafo original permanece
 
 Es una simulación educativa: un ciclo con múltiples instancias de recursos no
 demuestra por sí solo un interbloqueo. El grafo no confirma interbloqueos.
-La detección de ciclos queda reservada para el Prompt 8, sin implementarla aquí.
+La detección de ciclos del Prompt 8 se describe a continuación.
+
+
+## Detección de ciclos dirigidos (Prompt 8)
+
+`ResourceCycleDetector::detect(ResourceGraph $graph)` recibe un grafo producido
+por `ResourceGraphBuilder` (nodos existentes y aristas válidas). Construye listas
+de adyacencia solo con `allocation` y `request` de cantidad positiva: **Need
+queda excluida**, pues no es una solicitud activa. Las cantidades mayores que
+uno mantienen una sola arista agregada; no se crean instancias ficticias.
+
+El servicio ejecuta DFS con estados no visitado, activo y terminado. Una arista
+hacia un nodo activo cierra un ciclo y la pila permite reconstruir su recorrido,
+repitiendo el primer nodo al final. Los nodos terminados no generan falsos ciclos.
+Se recorren todas las componentes hasta hallar el primer ciclo, respetando el
+orden de nodos y el orden original de aristas salientes. No enumera todos los
+ciclos. Tiempo O(V+E), espacio O(V+E), sin mutar el grafo ni conservar estado.
+
+`ResourceCycleResult` es inmutable y contiene `status` y `path`:
+
+- `no_request`: no hay aristas Request positivas para analizar; recorrido vacío.
+- `acyclic`: hay Request positiva y no se detectaron ciclos; recorrido vacío.
+- `cycle`: se detectó al menos un ciclo; recorrido dirigido cerrado.
+
+La interfaz muestra texto accesible y el recorrido con escape Blade. Conserva
+matrices, grafo, análisis de seguridad, pasos y resultado de la solicitud.
+El análisis corresponde al escenario original y al vector explícito enviado,
+como instantánea educativa **anterior a evaluar la solicitud**, incluso si luego
+se concede o rechaza. No convierte la Request evaluada en una solicitud que
+permanezca activa después de la decisión. Un vector mal formado no se incorpora;
+un vector cero no aporta aristas activas. Las aristas Need nunca cierran ciclos
+en este análisis. Actualmente el formulario aporta un único proceso solicitante;
+el detector también admite grafos con solicitudes de varios procesos.
+
+Un ciclo con múltiples instancias no demuestra por sí solo un interbloqueo.
+El resultado no confirma interbloqueos y no sustituye la seguridad del banquero;
+la ausencia de ciclos tampoco convierte la instantánea en prueba de seguridad.
+No se implementan recuperación ni persistencia.

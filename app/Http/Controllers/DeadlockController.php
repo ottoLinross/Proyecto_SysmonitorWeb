@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DeadlockScenarioRequest;
 use App\Services\Deadlock\BankerSafetyAnalyzer;
+use App\Services\Deadlock\ResourceCycleDetector;
 use App\Services\Deadlock\ResourceGraphBuilder;
 use App\Services\Deadlock\ResourceRequestEvaluator;
 use App\Services\Deadlock\ResourceRequestInput;
@@ -20,25 +21,29 @@ class DeadlockController extends Controller
         return view('deadlocks.index');
     }
 
-    public function validateScenario(DeadlockScenarioRequest $request, ScenarioInput $input, BankerSafetyAnalyzer $analyzer, ResourceGraphBuilder $graphs): View
+    public function validateScenario(DeadlockScenarioRequest $request, ScenarioInput $input, BankerSafetyAnalyzer $analyzer, ResourceGraphBuilder $graphs, ResourceCycleDetector $cycles): View
     {
         $scenario = $input->validate($request->scenarioInput());
         $safety = $analyzer->analyze($scenario);
+
+        $graph = $graphs->build($scenario);
 
         return view('deadlocks.index', [
             'scenario' => $scenario,
             'need' => $safety->need,
             'safety' => $safety,
-            'graph' => $graphs->build($scenario),
+            'graph' => $graph,
+            'cycleResult' => $cycles->detect($graph),
         ]);
     }
 
-    public function evaluateRequest(DeadlockScenarioRequest $request, ScenarioInput $input, BankerSafetyAnalyzer $analyzer, ResourceRequestInput $requestInput, ResourceRequestEvaluator $evaluator, ResourceGraphBuilder $graphs): View|Response
+    public function evaluateRequest(DeadlockScenarioRequest $request, ScenarioInput $input, BankerSafetyAnalyzer $analyzer, ResourceRequestInput $requestInput, ResourceRequestEvaluator $evaluator, ResourceGraphBuilder $graphs, ResourceCycleDetector $cycles): View|Response
     {
         $data = $request->scenarioInput();
         $scenario = $input->validate($data);
         $safety = $analyzer->analyze($scenario);
-        $viewData = ['scenario' => $scenario, 'need' => $safety->need, 'safety' => $safety, 'requestValues' => $data, 'graph' => $graphs->build($scenario)];
+        $graph = $graphs->build($scenario);
+        $viewData = ['scenario' => $scenario, 'need' => $safety->need, 'safety' => $safety, 'requestValues' => $data, 'graph' => $graph, 'cycleResult' => $cycles->detect($graph)];
 
         try {
             $resourceRequest = $requestInput->validate($data, $scenario);
@@ -53,6 +58,7 @@ class DeadlockController extends Controller
         }
 
         $viewData['graph'] = $graphs->build($scenario, $resourceRequest);
+        $viewData['cycleResult'] = $cycles->detect($viewData['graph']);
         $viewData['requestResult'] = $evaluator->evaluate($scenario, $resourceRequest);
 
         return view('deadlocks.index', $viewData);

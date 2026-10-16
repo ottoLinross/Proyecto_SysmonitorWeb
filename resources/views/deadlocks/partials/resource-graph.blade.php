@@ -4,7 +4,10 @@
     <p>Allocation: recurso → proceso, unidades asignadas. Need: proceso → recurso, necesidad potencial (demanda restante máxima), no necesariamente una solicitud activa. Request: proceso → recurso, solicitud explícita evaluada por separado.</p>
     <p>Request muestra el vector enviado, incluso si fue denegado o supera Need; no implica concesión ni una solicitud pendiente después de la evaluación. Consulta el resultado de la solicitud.</p>
     <p>Cada R representa un tipo de recurso con múltiples instancias posibles. Las cantidades son unidades, sin inventar instancias individuales. No se muestran aristas de cantidad cero.</p>
-    <p>Un ciclo con múltiples instancias no demuestra por sí solo un interbloqueo. Este grafo no confirma un interbloqueo ni realiza detección de ciclos.</p>
+    <p>Un ciclo con múltiples instancias no demuestra por sí solo un interbloqueo. Este grafo no confirma un interbloqueo.</p>
+    @isset($cycleResult)
+        @include('deadlocks.partials.resource-cycle')
+    @endisset
     <div class="table-container" role="region" aria-labelledby="graph-nodes-caption" tabindex="0">
         <table>
             <caption id="graph-nodes-caption">Nodos del grafo</caption>
