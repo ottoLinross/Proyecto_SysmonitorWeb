@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CpuMemoryController;
+use App\Http\Controllers\DeadlockController;
 use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\SchedulingHistoryController;
@@ -12,6 +13,7 @@ Route::get('/', function () {
 });
 
 Route::get('/procesos', [ProcessController::class, 'index'])->name('processes.index');
+Route::get('/interbloqueos', [DeadlockController::class, 'index'])->name('deadlocks.index');
 Route::get('/planificacion', [SchedulingController::class, 'index'])->name('scheduling.index');
 Route::post('/planificacion/manual', [SchedulingController::class, 'manual'])->name('scheduling.manual');
 Route::post('/planificacion/aleatoria', [SchedulingController::class, 'random'])->name('scheduling.random');
