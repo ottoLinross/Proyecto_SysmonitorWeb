@@ -58,13 +58,25 @@ class DeadlockBankerSafetyTest extends TestCase
 
         // Replay the returned execution and independently verify resource availability.
         $work = $available;
-        foreach ($result->completed as $i) {
+        $finish = array_fill(0, $scenario->n, false);
+        $this->assertCount(count($completed), $result->steps);
+        foreach ($result->completed as $position => $i) {
+            $step = $result->steps[$position];
+            $this->assertSame($position + 1, $step->number);
+            $this->assertSame($i, $step->process);
+            $this->assertSame($work, $step->workBefore);
+            $this->assertSame($result->need[$i], $step->need);
+            $this->assertSame($allocation[$i], $step->allocation);
             foreach ($work as $j => $value) {
                 $this->assertLessThanOrEqual($value, $max[$i][$j] - $allocation[$i][$j]);
                 $work[$j] += $allocation[$i][$j];
             }
+            $finish[$i] = true;
+            $this->assertSame($work, $step->workAfter);
+            $this->assertSame($finish, $step->finish);
         }
         $this->assertSame($finalWork, $work);
+        $this->assertSame($result->finish, $finish);
         foreach ($unfinished as $i) {
             $blocked = false;
             foreach ($work as $j => $value) {
@@ -81,7 +93,30 @@ class DeadlockBankerSafetyTest extends TestCase
         $safe = $input->validate(['n' => 1, 'm' => 1, 'allocation' => [[1]], 'max' => [[1]], 'available' => [0]]);
         $unsafe = $input->validate(['n' => 1, 'm' => 1, 'allocation' => [[0]], 'max' => [[1]], 'available' => [0]]);
         $this->assertTrue($analyzer->analyze($safe)->isSafe);
-        $this->assertFalse($analyzer->analyze($unsafe)->isSafe);
+        $unsafeResult = $analyzer->analyze($unsafe);
+        $this->assertFalse($unsafeResult->isSafe);
+        $this->assertSame([], $unsafeResult->steps);
         $this->assertSame([0], $analyzer->analyze($safe)->safeSequence);
+    }
+
+    public function test_step_snapshots_capture_exact_vectors_without_later_mutation(): void
+    {
+        $scenario = (new ScenarioInput)->validate([
+            'n' => 3, 'm' => 2,
+            'allocation' => [[1, 2], [2, 0], [0, 1]],
+            'max' => [[3, 2], [2, 1], [1, 2]],
+            'available' => [0, 1],
+        ]);
+        $result = (new BankerSafetyAnalyzer(new NeedCalculator))->analyze($scenario);
+
+        $this->assertSame([1, 0, 2], $result->safeSequence);
+        $this->assertSame([
+            [1, 1, [0, 1], [0, 1], [2, 0], [2, 1], [false, true, false]],
+            [2, 0, [2, 1], [2, 0], [1, 2], [3, 3], [true, true, false]],
+            [3, 2, [3, 3], [1, 1], [0, 1], [3, 4], [true, true, true]],
+        ], array_map(fn ($step) => [
+            $step->number, $step->process, $step->workBefore, $step->need,
+            $step->allocation, $step->workAfter, $step->finish,
+        ], $result->steps));
     }
 }

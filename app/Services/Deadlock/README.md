@@ -71,9 +71,27 @@ estado inseguro, aunque `completed` puede contener una ejecución parcial.
 interbloqueo. No se enumeran todas las secuencias posibles.
 
 El análisis no modifica el escenario ni guarda estado entre llamadas. Su coste
-máximo es O(n²*m) en tiempo y O(n*m) en espacio, incluida Need. El controlador
+máximo es O(n²*m) en tiempo y O(n*m + n²) en espacio, incluidas Need y las
+instantáneas de Finish de los pasos. El controlador
 reutiliza Need del resultado para su presentación y muestra el estado y la
 secuencia segura o los procesos pendientes después de una validación exitosa.
+
+## Ejecución paso a paso
+
+`SafetyResult::steps` contiene una lista de `SafetyStep` inmutables registrados
+dentro del mismo bucle de `BankerSafetyAnalyzer`. No se reconstruye la ejecución
+ni se ejecuta un segundo algoritmo. Cada paso incluye número desde 1, posición
+del proceso desde 0 (P1, P2, etc. en la vista), Work antes, Need y Allocation del
+proceso, Work después de devolver Allocation y Finish actualizado en orden
+original. Los arreglos se capturan por valor y conservan las instantáneas previas.
+
+La vista muestra los registros en una tabla con caption, encabezados y región
+desplazable accesible con teclado. Los vectores siguen el orden de recursos;
+Finish contiene booleanos en orden de procesos. En estado seguro hay un paso
+por proceso. En estado inseguro solo se muestran los pasos realmente ejecutados,
+sin presentar el progreso parcial como una secuencia segura. Si no hay progreso,
+se muestra un mensaje sin filas inventadas. Se mantiene la lista de pendientes
+y la aclaración de que inseguridad no confirma interbloqueo.
 
 No se implementan solicitudes de recursos, grafos, ciclos, recuperación ni
 persistencia de simulaciones.

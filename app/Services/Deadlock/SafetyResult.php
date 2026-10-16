@@ -13,6 +13,7 @@ final readonly class SafetyResult
      * @param  list<int>  $unfinished
      * @param  list<int>  $work
      * @param  list<bool>  $finish
+     * @param  list<SafetyStep>  $steps
      */
     public function __construct(
         public array $need,
@@ -22,5 +23,6 @@ final readonly class SafetyResult
         public array $unfinished,
         public array $work,
         public array $finish,
+        public array $steps,
     ) {}
 }

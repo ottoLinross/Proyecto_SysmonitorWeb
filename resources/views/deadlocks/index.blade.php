@@ -17,6 +17,11 @@
         button { margin-top: 20px; cursor: pointer; }
         .errors { color: #991b1b; }
         pre { overflow-x: auto; }
+        .table-container { overflow-x: auto; }
+        .table-container:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        caption { padding: 12px 0; text-align: left; font-weight: 600; }
+        th, td { padding: 12px; border-bottom: 1px solid #cbd5e1; vertical-align: top; }
     </style>
 </head>
 <body>
@@ -87,6 +92,44 @@
                         {{ implode(', ', array_map(static fn ($i) => 'P'.($i + 1), $safety->unfinished)) }}
                     </p>
                     <p>Un estado inseguro no confirma por sí solo la existencia de un interbloqueo.</p>
+                @endif
+                <h3 id="steps-title">Ejecución paso a paso</h3>
+                <p>Los vectores conservan el orden original de los recursos. Finish muestra el estado de P1 a P{{ $scenario->n }}: true significa finalizado y false, pendiente.</p>
+                @if ($safety->steps === [])
+                    <p>Ningún proceso pudo ejecutarse; no hay pasos registrados.</p>
+                @else
+                    @unless ($safety->isSafe)
+                        <p>Se muestran únicamente los pasos ejecutados antes de detenerse; no constituyen una secuencia segura completa.</p>
+                    @endunless
+                    <div class="table-container" role="region" aria-labelledby="steps-title" tabindex="0">
+                        <table>
+                            <caption>Pasos reales del análisis de seguridad</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Paso</th>
+                                    <th scope="col">Proceso</th>
+                                    <th scope="col">Work antes</th>
+                                    <th scope="col">Need del proceso</th>
+                                    <th scope="col">Allocation del proceso</th>
+                                    <th scope="col">Work después</th>
+                                    <th scope="col">Finish actualizado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($safety->steps as $step)
+                                    <tr>
+                                        <th scope="row">{{ $step->number }}</th>
+                                        <td>P{{ $step->process + 1 }}</td>
+                                        <td><code>{{ json_encode($step->workBefore) }}</code></td>
+                                        <td><code>{{ json_encode($step->need) }}</code></td>
+                                        <td><code>{{ json_encode($step->allocation) }}</code></td>
+                                        <td><code>{{ json_encode($step->workAfter) }}</code></td>
+                                        <td><code>{{ json_encode($step->finish) }}</code></td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 @endif
             </section>
         @endisset

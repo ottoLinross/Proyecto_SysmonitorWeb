@@ -13,6 +13,7 @@ class BankerSafetyAnalyzer
         $work = $scenario->available;
         $finish = array_fill(0, $scenario->n, false);
         $completed = [];
+        $steps = [];
 
         while (count($completed) < $scenario->n) {
             $selected = null;
@@ -34,11 +35,21 @@ class BankerSafetyAnalyzer
                 break;
             }
 
+            $workBefore = $work;
             foreach ($scenario->allocation[$selected] as $j => $allocated) {
                 $work[$j] += $allocated;
             }
             $finish[$selected] = true;
             $completed[] = $selected;
+            $steps[] = new SafetyStep(
+                count($steps) + 1,
+                $selected,
+                $workBefore,
+                $need[$selected],
+                $scenario->allocation[$selected],
+                $work,
+                $finish,
+            );
         }
 
         $unfinished = [];
@@ -49,6 +60,6 @@ class BankerSafetyAnalyzer
         }
         $isSafe = $unfinished === [];
 
-        return new SafetyResult($need, $isSafe, $isSafe ? $completed : null, $completed, $unfinished, $work, $finish);
+        return new SafetyResult($need, $isSafe, $isSafe ? $completed : null, $completed, $unfinished, $work, $finish, $steps);
     }
 }
