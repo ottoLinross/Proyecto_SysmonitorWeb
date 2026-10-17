@@ -18,6 +18,8 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #cbd5e1; white-space: nowrap; }
         #usage-title { margin-bottom: 16px; }
+        .usage-bar { width: 10rem; height: 0.75rem; margin-top: 6px; overflow: hidden; border: 1px solid #526173; border-radius: 4px; background: #e2e8f0; }
+        .usage-bar-fill { height: 100%; background: #1d4ed8; }
         @media (max-width: 800px) { main { padding: 24px 16px; } }
     </style>
 </head>

@@ -20,7 +20,17 @@
                 @foreach ($usage['filesystems'] as $filesystem)
                     <tr>
                         @foreach (['filesystem', 'size', 'used', 'available', 'use_percent', 'mountpoint'] as $field)
-                            <td>{{ $filesystem[$field] }}</td>
+                            <td>
+                                {{ $filesystem[$field] }}
+                                @if ($field === 'use_percent')
+                                    <div class="usage-bar" role="progressbar"
+                                        aria-label="Ocupación de {{ $filesystem['filesystem'] }} en {{ $filesystem['mountpoint'] }}"
+                                        aria-valuenow="{{ (int) $filesystem['use_percent'] }}"
+                                        aria-valuemin="0" aria-valuemax="100">
+                                        <div class="usage-bar-fill" style="width: {{ (int) $filesystem['use_percent'] }}%" aria-hidden="true"></div>
+                                    </div>
+                                @endif
+                            </td>
                         @endforeach
                     </tr>
                 @endforeach
