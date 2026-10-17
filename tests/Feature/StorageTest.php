@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\StorageController;
+use App\Services\Storage\LsblkRunner;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -21,10 +21,10 @@ class StorageTest extends TestCase
         $this->assertSame('/almacenamiento', route('storage.index', [], false));
     }
 
-    public function test_initial_page_renders_without_database_or_process_calls(): void
+    public function test_page_renders_without_database_or_real_process_calls(): void
     {
         DB::shouldReceive('connection')->never();
-        Process::fake();
+        $this->mock(LsblkRunner::class)->shouldReceive('run')->once()->andReturn('{"blockdevices":[]}');
 
         $this->get(route('storage.index', [], false))
             ->assertOk()
@@ -33,8 +33,8 @@ class StorageTest extends TestCase
             ->assertSee('<title>Almacenamiento — SysMonitor</title>', false)
             ->assertSeeText('SysMonitor · M5')
             ->assertSee('<h1>Almacenamiento</h1>', false)
-            ->assertSeeText('Estructura inicial del módulo de almacenamiento.')
-            ->assertSeeText('La consulta de datos del sistema todavía no está implementada.')
+            ->assertSeeText('Discos y particiones del servidor Debian.')
+            ->assertSeeText('No se encontraron dispositivos.')
             ->assertSeeText('Dispositivos de almacenamiento')
             ->assertSeeText('Uso del espacio')
             ->assertSeeText('Puntos de montaje')
@@ -43,6 +43,5 @@ class StorageTest extends TestCase
             ->assertDontSee('<form', false)
             ->assertDontSee('<script', false);
 
-        Process::assertNothingRan();
     }
 }

@@ -21,14 +21,28 @@
         <header>
             <p>SysMonitor · M5</p>
             <h1>Almacenamiento</h1>
-            <p>Estructura inicial del módulo de almacenamiento.</p>
-            <p>La consulta de datos del sistema todavía no está implementada.</p>
+            <p>Discos y particiones del servidor Debian.</p>
+            <p>Consulta de solo lectura mediante lsblk.</p>
         </header>
         <div class="panels">
             @foreach ($sections as $id => $title)
                 <section aria-labelledby="{{ $id }}-title">
                     <h2 id="{{ $id }}-title">{{ $title }}</h2>
-                    <p>Pendiente de implementación. No se han consultado datos.</p>
+                    @if ($id === 'devices')
+                        @if (! $storage['available'])
+                            <p role="status">No se pudo consultar la información de almacenamiento.</p>
+                        @elseif ($storage['devices'] === [])
+                            <p>No se encontraron dispositivos.</p>
+                        @else
+                            <ul>
+                                @foreach ($storage['devices'] as $device)
+                                    @include('storage.partials.device', ['device' => $device])
+                                @endforeach
+                            </ul>
+                        @endif
+                    @else
+                        <p>Pendiente de implementación. No se han consultado datos.</p>
+                    @endif
                 </section>
             @endforeach
         </div>

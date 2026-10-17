@@ -9,6 +9,6 @@ class StorageController extends Controller
 {
     public function index(StorageOverviewService $overview): View
     {
-        return view('storage.index', ['sections' => $overview->sections()]);
+        return view('storage.index', ['sections' => $overview->sections(), 'storage' => $overview->devices()]);
     }
 }
