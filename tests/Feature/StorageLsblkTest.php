@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Storage\DfRunner;
 use App\Services\Storage\LsblkRunner;
 use App\Services\Storage\StorageOverviewService;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -11,6 +12,12 @@ use Tests\TestCase;
 
 class StorageLsblkTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->mock(DfRunner::class)->shouldReceive('run')->andReturn("Filesystem Size Used Avail Use% Mounted on\n");
+    }
+
     private static function device(array $overrides = []): array
     {
         return array_replace(['name' => 'disk alpha', 'path' => '/dev/disk alpha', 'type' => 'disk', 'size' => 12345, 'fstype' => null, 'mountpoints' => null, 'model' => 'Model with spaces'], $overrides);

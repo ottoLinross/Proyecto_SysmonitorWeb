@@ -13,6 +13,11 @@
         p { color: #526173; line-height: 1.5; }
         .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 24px; margin-top: 24px; }
         section { min-width: 0; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+        section[aria-labelledby="usage-title"] { grid-column: 1 / -1; }
+        .table-scroll { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #cbd5e1; white-space: nowrap; }
+        #usage-title { margin-bottom: 16px; }
         @media (max-width: 800px) { main { padding: 24px 16px; } }
     </style>
 </head>
@@ -22,7 +27,7 @@
             <p>SysMonitor · M5</p>
             <h1>Almacenamiento</h1>
             <p>Discos y particiones del servidor Debian.</p>
-            <p>Consulta de solo lectura mediante lsblk.</p>
+            <p>Consulta de solo lectura mediante lsblk y df.</p>
         </header>
         <div class="panels">
             @foreach ($sections as $id => $title)
@@ -40,6 +45,8 @@
                                 @endforeach
                             </ul>
                         @endif
+                    @elseif ($id === 'usage')
+                        @include('storage.partials.usage')
                     @else
                         <p>Pendiente de implementación. No se han consultado datos.</p>
                     @endif

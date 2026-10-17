@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\StorageController;
+use App\Services\Storage\DfRunner;
 use App\Services\Storage\LsblkRunner;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -10,6 +11,12 @@ use Tests\TestCase;
 
 class StorageTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->mock(DfRunner::class)->shouldReceive('run')->andReturn("Filesystem Size Used Avail Use% Mounted on\n");
+    }
+
     public function test_storage_route_uses_the_dedicated_controller(): void
     {
         $route = Route::getRoutes()->getByName('storage.index');
