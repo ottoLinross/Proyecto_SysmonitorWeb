@@ -16,6 +16,9 @@
                 <thead><tr>
                     <th scope="col">Nombre</th>
                     <th scope="col">Tipo</th>
+                    <th scope="col">Permisos Unix</th>
+                    <th scope="col">Propietario</th>
+                    <th scope="col">Tamaño</th>
                 </tr></thead>
                 <tbody>
                     @foreach ($explorer['entries'] as $entry)
@@ -28,6 +31,9 @@
                                 @endif
                             </td>
                             <td>{{ $entry['type'] }}</td>
+                            <td><code>{{ $entry['permissions'] }}</code></td>
+                            <td>{{ $entry['owner'] }}</td>
+                            <td>{{ $entry['size'] }}</td>
                         </tr>
                     @endforeach
                 </tbody>

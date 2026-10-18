@@ -152,6 +152,116 @@ class StorageExplorerTest extends TestCase
             ->assertDontSee('<tag>', false)->assertDontSeeText('never displayed');
     }
 
+    public function test_file_directory_and_link_metadata_use_the_entry_itself(): void
+    {
+        chmod($this->root.'/example.txt', 0644);
+        chmod($this->root.'/sub', 0755);
+        symlink($this->root.'/example.txt', $this->root.'/file-link');
+        symlink($this->sandbox.'/root-neighbor/secret.txt', $this->root.'/external-link');
+        symlink($this->sandbox.'/missing', $this->root.'/broken-link');
+        $entries = array_column(app(FileExplorerService::class)->browse()['entries'], null, 'name');
+        $this->assertSame('-rw-r--r--', $entries['example.txt']['permissions']);
+        $this->assertSame('drwxr-xr-x', $entries['sub']['permissions']);
+        $this->assertSame('9 bytes', $entries['example.txt']['size']);
+        $this->assertSame('—', $entries['sub']['size']);
+        $uid = lstat($this->root.'/example.txt')['uid'];
+        $user = function_exists('posix_getpwuid') ? posix_getpwuid($uid) : false;
+        $this->assertSame($user['name'] ?? (string) $uid, $entries['example.txt']['owner']);
+        foreach (['file-link', 'external-link', 'broken-link'] as $name) {
+            $this->assertSame('lrwxrwxrwx', $entries[$name]['permissions']);
+            $this->assertSame('Enlace simbólico', $entries[$name]['type']);
+            $this->assertSame('—', $entries[$name]['size']);
+            $this->assertNull($entries[$name]['path']);
+        }
+        $this->get('/almacenamiento')->assertOk()->assertSeeText('Permisos Unix')
+            ->assertSeeText('Propietario')->assertSeeText('Tamaño')->assertSeeText('-rw-r--r--')
+            ->assertDontSeeText($this->sandbox)->assertDontSeeText('outside secret');
+    }
+
+    public static function metadataCases(): array
+    {
+        return [
+            [0100644, 0, '-rw-r--r--', '0 bytes'],
+            [0100755, 1023, '-rwxr-xr-x', '1023 bytes'],
+            [0100600, 1024, '-rw-------', '1.00 KiB'],
+            [0100640, 1536, '-rw-r-----', '1.50 KiB'],
+            [0100644, 1048576, '-rw-r--r--', '1.00 MiB'],
+            [0100644, 1572864, '-rw-r--r--', '1.50 MiB'],
+            [0107755, 0, '-rwsr-sr-t', '0 bytes'],
+            [0107644, 0, '-rwSr-Sr-T', '0 bytes'],
+            [0040755, 4096, 'drwxr-xr-x', '—'],
+            [0120777, 80, 'lrwxrwxrwx', '—'],
+        ];
+    }
+
+    #[DataProvider('metadataCases')]
+    public function test_mode_bits_sizes_and_numeric_uid_fallback(int $mode, int $size, string $permissions, string $formattedSize): void
+    {
+        $service = new class($this->root, $mode, $size) extends FileExplorerService
+        {
+            public function __construct(string $root, private int $mode, private int $size)
+            {
+                parent::__construct($root);
+            }
+
+            protected function entryStat(string $path): array|false
+            {
+                return ['mode' => $this->mode, 'uid' => 123456789, 'size' => $this->size];
+            }
+
+            protected function lookupOwner(int $uid): array|false
+            {
+                return false;
+            }
+        };
+        $entry = $service->browse()['entries'][0];
+        $this->assertSame($permissions, $entry['permissions']);
+        $this->assertSame($formattedSize, $entry['size']);
+        $this->assertSame('123456789', $entry['owner']);
+    }
+
+    public function test_invalid_account_and_failed_metadata_are_safe_and_owner_is_escaped(): void
+    {
+        $service = new class($this->root) extends FileExplorerService
+        {
+            public array|false $user = ['name' => ''];
+
+            public bool $fail = false;
+
+            protected function entryStat(string $path): array|false
+            {
+                if ($this->fail && basename($path) === 'example.txt') {
+                    return false;
+                }
+
+                return parent::entryStat($path);
+            }
+
+            protected function lookupOwner(int $uid): array|false
+            {
+                return $this->user;
+            }
+        };
+        $uid = (string) lstat($this->root.'/example.txt')['uid'];
+        foreach ([['name' => ''], ['name' => 123], []] as $user) {
+            $service->user = $user;
+            $entries = array_column($service->browse()['entries'], null, 'name');
+            $this->assertSame($uid, $entries['example.txt']['owner']);
+        }
+        $service->user = ['name' => '<script>owner</script>'];
+        $this->app->instance(FileExplorerService::class, $service);
+        $this->get('/almacenamiento')->assertOk()->assertSee('&lt;script&gt;owner&lt;/script&gt;', false)
+            ->assertDontSee('<script>owner</script>', false);
+        $service->fail = true;
+        $result = $service->browse();
+        $this->assertTrue($result['available']);
+        $entries = array_column($result['entries'], null, 'name');
+        foreach (['permissions', 'owner', 'size'] as $field) {
+            $this->assertSame('—', $entries['example.txt'][$field]);
+        }
+        $this->assertSame('drwx', substr($entries['sub']['permissions'], 0, 4));
+    }
+
     public function test_http_cannot_write_delete_upload_or_download_files(): void
     {
         foreach (['POST', 'PUT', 'PATCH', 'DELETE'] as $method) {
