@@ -23,13 +23,13 @@ class StorageSummaryTest extends TestCase
             'available' => true, 'path' => 'sub', 'parent' => '', 'entries' => [], 'message' => null,
         ]);
         $partition = $this->device('sda1', 'part');
-        $this->mock(LsblkRunner::class)->shouldReceive('run')->byDefault()->andReturn(json_encode(['blockdevices' => [
+        $this->mock(LsblkRunner::class)->shouldReceive('run')->withNoArgs()->byDefault()->andReturn(json_encode(['blockdevices' => [
             $this->device('sda', 'disk', [$partition]),
             $this->device('sdb', 'disk', [$partition]),
             $this->device('loop0', 'loop'),
         ]]));
-        $this->mock(DfRunner::class)->shouldReceive('run')->byDefault()->andReturn("Filesystem Size Used Avail Use% Mounted on\n/dev/sda1 10G 4G 6G 40% /\n/dev/sda1 10G 4G 6G 40% /bind\n");
-        $this->mock(FindmntRunner::class)->shouldReceive('run')->byDefault()->andReturn(json_encode(['filesystems' => [
+        $this->mock(DfRunner::class)->shouldReceive('run')->withNoArgs()->byDefault()->andReturn("Filesystem Size Used Avail Use% Mounted on\n/dev/sda1 10G 4G 6G 40% /\n/dev/sda1 10G 4G 6G 40% /bind\n");
+        $this->mock(FindmntRunner::class)->shouldReceive('run')->withNoArgs()->byDefault()->andReturn(json_encode(['filesystems' => [
             ['source' => '/dev/sda1', 'target' => '/', 'fstype' => 'ext4'],
             ['source' => '/dev/sda1', 'target' => '/bind', 'fstype' => 'ext4'],
             ['source' => '/dev/sda1', 'target' => '/bind', 'fstype' => 'ext4'],
@@ -38,13 +38,26 @@ class StorageSummaryTest extends TestCase
         $reader = $this->mock(SystemUsersReader::class);
         $reader->shouldReceive('passwd')->byDefault()->andReturn("root:x:0:0::/root:/bin/bash\nuser:x:1000:1000::/home/user:/bin/bash\n");
         $reader->shouldReceive('loginDefs')->byDefault()->andReturn('UID_MIN 1000');
-        $this->mock(WhoRunner::class)->shouldReceive('run')->byDefault()->andReturn('');
+        $this->mock(WhoRunner::class)->shouldReceive('run')->withNoArgs()->byDefault()->andReturn('');
     }
 
     private function device(string $name, string $type, array $children = []): array
     {
         return ['name' => $name, 'path' => '/dev/'.$name, 'type' => $type, 'size' => 100000,
             'fstype' => null, 'mountpoints' => null, 'model' => null, 'children' => $children];
+    }
+
+    public function test_http_payloads_cannot_change_commands_or_sources(): void
+    {
+        $query = http_build_query([
+            'path' => 'sub', 'command' => ['sh', '-c', 'touch /tmp/forbidden'],
+            'args' => '; id | cat', 'source' => '/etc/shadow', 'action' => 'download',
+            'file' => '../../etc/passwd', 'root' => '/',
+        ]);
+        $this->get('/almacenamiento?'.$query)->assertOk()
+            ->assertViewHas('summary', fn (array $summary): bool => $summary['disks'] === 2 && $summary['users'] === 2)
+            ->assertHeaderMissing('Content-Disposition')->assertDontSeeText('touch /tmp/forbidden')
+            ->assertDontSeeText('/etc/shadow');
     }
 
     public function test_summary_is_consistent_deduplicated_and_does_not_sum_capacities(): void

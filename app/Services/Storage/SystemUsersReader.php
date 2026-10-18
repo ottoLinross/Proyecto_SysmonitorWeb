@@ -16,11 +16,6 @@ class SystemUsersReader
 
     private function read(string $path): string
     {
-        $contents = @file_get_contents($path);
-        if ($contents === false) {
-            throw new \RuntimeException('System users file unavailable');
-        }
-
-        return $contents;
+        return StorageFileRead::read($path);
     }
 }

@@ -14,11 +14,11 @@ class FileExplorerService
         }
 
         try {
-            $root = realpath($this->root ?? base_path());
+            $root = @realpath($this->root ?? base_path());
             if ($root === false || ! is_dir($root)) {
                 return $failure;
             }
-            $directory = realpath($root.DIRECTORY_SEPARATOR.$path);
+            $directory = @realpath($root.DIRECTORY_SEPARATOR.$path);
             if ($directory === false || ! $this->withinRoot($directory, $root) || ! is_dir($directory) || ! is_readable($directory)) {
                 return $failure;
             }
@@ -29,8 +29,8 @@ class FileExplorerService
                     continue;
                 }
                 $entryPath = $directory.DIRECTORY_SEPARATOR.$name;
-                $canonical = realpath($entryPath);
-                $link = is_link($entryPath);
+                $canonical = @realpath($entryPath);
+                $link = @is_link($entryPath);
                 $isDirectory = $canonical !== false && $this->withinRoot($canonical, $root) && is_dir($canonical);
                 $target = $relative === '' ? $name : $relative.'/'.$name;
                 $metadata = $this->metadata($entryPath);

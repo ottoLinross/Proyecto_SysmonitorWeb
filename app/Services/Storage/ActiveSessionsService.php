@@ -11,6 +11,9 @@ class ActiveSessionsService
         try {
             $sessions = [];
             foreach (preg_split('/\R/', $this->runner->run()) as $line) {
+                if (! preg_match('//u', $line) || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $line)) {
+                    continue;
+                }
                 // GNU who with LC_ALL=C reports YYYY-MM-DD HH:MM and optional (origin).
                 if (! preg_match('/^\s*(\S+)\s+(\S+)\s+(\d{4}-\d{2}-\d{2})\s+([0-2]\d:[0-5]\d)\s*(?:\(([^\r\n]*)\))?\s*$/D', $line, $fields)) {
                     continue;

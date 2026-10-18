@@ -39,6 +39,9 @@ class MountService
         try {
             $mounts = [];
             foreach (preg_split('/\R/', $this->fstab->read()) as $line) {
+                if (! preg_match('//u', $line) || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $line)) {
+                    continue;
+                }
                 $line = trim(explode('#', $line, 2)[0]);
                 if ($line === '') {
                     continue;

@@ -8,10 +8,7 @@ class FindmntRunner
 {
     public function run(): string
     {
-        $process = $this->createProcess();
-        $process->mustRun();
-
-        return $process->getOutput();
+        return StorageCommandOutput::run($this->createProcess());
     }
 
     protected function createProcess(): Process

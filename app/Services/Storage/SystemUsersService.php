@@ -29,6 +29,9 @@ class SystemUsersService
         $status = 'Disponible';
         try {
             foreach (explode("\n", $this->reader->passwd()) as $line) {
+                if (! preg_match('//u', $line) || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $line)) {
+                    continue;
+                }
                 $fields = explode(':', rtrim($line, "\r"));
                 if (count($fields) !== 7 || $fields[0] === '' || str_starts_with($fields[0], '#')) {
                     continue;

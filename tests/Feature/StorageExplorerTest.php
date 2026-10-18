@@ -89,7 +89,7 @@ class StorageExplorerTest extends TestCase
     public static function unsafePaths(): array
     {
         return [
-            ['../root-neighbor'], ['sub/../../root-neighbor'], ['/etc'], ['//etc'], ['C:\\Windows'],
+            ['../root-neighbor'], ['../../'], ['..'], ['/'], ['file:///etc'], ['sub/../../root-neighbor'], ['/etc'], ['//etc'], ['C:\\Windows'],
             ['%2e%2e/root-neighbor'], ['%2E%2E%2Froot-neighbor'], ['%252e%252e%252froot-neighbor'],
             ['..\\root-neighbor'], ["sub\0/nested"], ['%00'], [['sub']],
         ];
@@ -260,6 +260,49 @@ class StorageExplorerTest extends TestCase
             $this->assertSame('—', $entries['example.txt'][$field]);
         }
         $this->assertSame('drwx', substr($entries['sub']['permissions'], 0, 4));
+    }
+
+    public function test_symlink_loops_are_not_navigable_and_do_not_leak_paths(): void
+    {
+        symlink('loop-b', $this->root.'/loop-a');
+        symlink('loop-a', $this->root.'/loop-b');
+        symlink('.', $this->root.'/self-root');
+        $entries = array_column(app(FileExplorerService::class)->browse()['entries'], null, 'name');
+        $this->assertNull($entries['loop-a']['path']);
+        $this->assertSame('Enlace simbólico', $entries['loop-a']['type']);
+        $this->get('/almacenamiento?path=loop-a')->assertOk()
+            ->assertSeeText('No se pudo acceder al directorio solicitado.')->assertDontSeeText($this->sandbox);
+        $result = app(FileExplorerService::class)->browse('self-root');
+        $this->assertTrue($result['available']);
+        $this->assertSame('', $result['path']);
+        $this->assertNull($result['parent']);
+    }
+
+    public function test_unicode_names_and_directory_navigation_work_without_reading_file_contents(): void
+    {
+        mkdir($this->root.'/Árbol-日本語');
+        file_put_contents($this->root.'/Árbol-日本語/📄 résumé.txt', 'private contents');
+        $this->get('/almacenamiento')->assertOk()->assertSeeText('Árbol-日本語');
+        $this->get('/almacenamiento?'.http_build_query(['path' => 'Árbol-日本語']))->assertOk()
+            ->assertSeeText('📄 résumé.txt')->assertDontSeeText('private contents');
+    }
+
+    public function test_unreadable_files_are_never_opened_and_inaccessible_directories_fail_safely(): void
+    {
+        chmod($this->root.'/example.txt', 0000);
+        chmod($this->root.'/sub', 0000);
+        try {
+            $this->get('/almacenamiento')->assertOk()->assertSeeText('example.txt')->assertDontSeeText('unchanged');
+            $this->assertFalse(app(FileExplorerService::class)->browse('example.txt')['available']);
+            if (is_readable($this->root.'/sub')) {
+                $this->markTestSkipped('The current account bypasses Unix read permissions.');
+            }
+            $this->get('/almacenamiento?path=sub')->assertOk()
+                ->assertSeeText('No se pudo acceder al directorio solicitado.')->assertDontSeeText('nested');
+        } finally {
+            chmod($this->root.'/example.txt', 0600);
+            chmod($this->root.'/sub', 0700);
+        }
     }
 
     public function test_http_cannot_write_delete_upload_or_download_files(): void
