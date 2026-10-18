@@ -73,6 +73,7 @@ class StorageOverviewService
             'usage' => 'Uso del espacio',
             'mounts' => 'Puntos de montaje',
             'users' => 'Usuarios del sistema',
+            'sessions' => 'Sesiones activas',
         ];
     }
 }

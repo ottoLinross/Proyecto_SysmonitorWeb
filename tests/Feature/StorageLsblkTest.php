@@ -8,6 +8,7 @@ use App\Services\Storage\FstabReader;
 use App\Services\Storage\LsblkRunner;
 use App\Services\Storage\StorageOverviewService;
 use App\Services\Storage\SystemUsersReader;
+use App\Services\Storage\WhoRunner;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -18,6 +19,7 @@ class StorageLsblkTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->mock(WhoRunner::class)->shouldReceive('run')->andReturn('');
         $this->mock(SystemUsersReader::class)->shouldReceive('passwd')->andReturn('')->getMock()->shouldReceive('loginDefs')->andReturn('UID_MIN 1000');
         $this->mock(FindmntRunner::class)->shouldReceive('run')->andReturn('{"filesystems":[]}');
         $this->mock(FstabReader::class)->shouldReceive('read')->andReturn('');

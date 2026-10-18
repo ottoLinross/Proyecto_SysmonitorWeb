@@ -8,6 +8,7 @@ use App\Services\Storage\FstabReader;
 use App\Services\Storage\LsblkRunner;
 use App\Services\Storage\SystemUsersReader;
 use App\Services\Storage\SystemUsersService;
+use App\Services\Storage\WhoRunner;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -16,6 +17,7 @@ class StorageUsersTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->mock(WhoRunner::class)->shouldReceive('run')->andReturn('');
         $this->mock(LsblkRunner::class)->shouldReceive('run')->andReturn('{"blockdevices":[]}');
         $this->mock(DfRunner::class)->shouldReceive('run')->andReturn("Filesystem Size Used Avail Use% Mounted on\n");
         $this->mock(FindmntRunner::class)->shouldReceive('run')->andReturn('{"filesystems":[]}');
