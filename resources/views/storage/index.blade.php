@@ -13,7 +13,7 @@
         p { color: #526173; line-height: 1.5; }
         .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 24px; margin-top: 24px; }
         section { min-width: 0; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
-        section[aria-labelledby="usage-title"], section[aria-labelledby="mounts-title"] { grid-column: 1 / -1; }
+        section[aria-labelledby="usage-title"], section[aria-labelledby="users-title"], section[aria-labelledby="mounts-title"] { grid-column: 1 / -1; }
         .table-scroll { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #cbd5e1; white-space: nowrap; }
@@ -29,7 +29,7 @@
             <p>SysMonitor · M5</p>
             <h1>Almacenamiento</h1>
             <p>Discos y particiones del servidor Debian.</p>
-            <p>Consulta de solo lectura mediante lsblk, df, findmnt y /etc/fstab.</p>
+            <p>Consulta de solo lectura mediante lsblk, df, findmnt, /etc/fstab, /etc/passwd y /etc/login.defs.</p>
         </header>
         <div class="panels">
             @foreach ($sections as $id => $title)
@@ -49,6 +49,8 @@
                         @endif
                     @elseif ($id === 'usage')
                         @include('storage.partials.usage')
+                    @elseif ($id === 'users')
+                        @include('storage.partials.users')
                     @elseif ($id === 'mounts')
                         @include('storage.partials.mounts')
                     @else

@@ -7,6 +7,7 @@ use App\Services\Storage\FilesystemUsageService;
 use App\Services\Storage\FindmntRunner;
 use App\Services\Storage\FstabReader;
 use App\Services\Storage\LsblkRunner;
+use App\Services\Storage\SystemUsersReader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -19,6 +20,7 @@ class StorageDfTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->mock(SystemUsersReader::class)->shouldReceive('passwd')->andReturn('')->getMock()->shouldReceive('loginDefs')->andReturn('UID_MIN 1000');
         $this->mock(FindmntRunner::class)->shouldReceive('run')->andReturn('{"filesystems":[]}');
         $this->mock(FstabReader::class)->shouldReceive('read')->andReturn('');
         $this->mock(LsblkRunner::class)->shouldReceive('run')->andReturn('{"blockdevices":[{"name":"disk-preserved","path":"/dev/example","type":"disk","size":123,"fstype":null,"mountpoints":null,"model":null}]}');

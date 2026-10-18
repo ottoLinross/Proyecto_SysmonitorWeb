@@ -72,6 +72,7 @@ class StorageOverviewService
             'devices' => 'Dispositivos de almacenamiento',
             'usage' => 'Uso del espacio',
             'mounts' => 'Puntos de montaje',
+            'users' => 'Usuarios del sistema',
         ];
     }
 }

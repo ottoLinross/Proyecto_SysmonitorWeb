@@ -6,6 +6,7 @@ use App\Services\Storage\DfRunner;
 use App\Services\Storage\FindmntRunner;
 use App\Services\Storage\FstabReader;
 use App\Services\Storage\LsblkRunner;
+use App\Services\Storage\SystemUsersReader;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -14,6 +15,7 @@ class StorageOccupancyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->mock(SystemUsersReader::class)->shouldReceive('passwd')->andReturn('')->getMock()->shouldReceive('loginDefs')->andReturn('UID_MIN 1000');
         $this->mock(FindmntRunner::class)->shouldReceive('run')->andReturn('{"filesystems":[]}');
         $this->mock(FstabReader::class)->shouldReceive('read')->andReturn('');
         $this->mock(LsblkRunner::class)->shouldReceive('run')->once()->andReturn('{"blockdevices":[]}');
