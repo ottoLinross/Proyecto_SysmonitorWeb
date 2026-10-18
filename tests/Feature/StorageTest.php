@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\StorageController;
 use App\Services\Storage\DfRunner;
+use App\Services\Storage\FindmntRunner;
+use App\Services\Storage\FstabReader;
 use App\Services\Storage\LsblkRunner;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -14,6 +16,8 @@ class StorageTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->mock(FindmntRunner::class)->shouldReceive('run')->andReturn('{"filesystems":[]}');
+        $this->mock(FstabReader::class)->shouldReceive('read')->andReturn('');
         $this->mock(DfRunner::class)->shouldReceive('run')->andReturn("Filesystem Size Used Avail Use% Mounted on\n");
     }
 
@@ -45,7 +49,8 @@ class StorageTest extends TestCase
             ->assertSeeText('Dispositivos de almacenamiento')
             ->assertSeeText('Uso del espacio')
             ->assertSeeText('Puntos de montaje')
-            ->assertSeeText('Pendiente de implementación. No se han consultado datos.')
+            ->assertSeeText('No se encontraron montajes activos.')
+            ->assertSeeText('No se encontraron montajes configurados válidos.')
             ->assertDontSee('<table', false)
             ->assertDontSee('<form', false)
             ->assertDontSee('<script', false);

@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Services\Storage\DfRunner;
 use App\Services\Storage\FilesystemUsageService;
+use App\Services\Storage\FindmntRunner;
+use App\Services\Storage\FstabReader;
 use App\Services\Storage\LsblkRunner;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
@@ -17,6 +19,8 @@ class StorageDfTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->mock(FindmntRunner::class)->shouldReceive('run')->andReturn('{"filesystems":[]}');
+        $this->mock(FstabReader::class)->shouldReceive('read')->andReturn('');
         $this->mock(LsblkRunner::class)->shouldReceive('run')->andReturn('{"blockdevices":[{"name":"disk-preserved","path":"/dev/example","type":"disk","size":123,"fstype":null,"mountpoints":null,"model":null}]}');
     }
 

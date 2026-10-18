@@ -41,6 +41,16 @@ class StorageOverviewService
                     throw new \UnexpectedValueException;
                 }
             }
+            $pttype = $device['pttype'] ?? null;
+            if ($pttype !== null && ! is_string($pttype)) {
+                throw new \UnexpectedValueException;
+            }
+            $device['partition_table'] = match ($pttype) {
+                'gpt' => 'GPT',
+                'dos' => 'MBR (dos)',
+                null, '' => 'No reportado',
+                default => $pttype,
+            };
             $children = $device['children'] ?? [];
             if (! is_array($children) || ! array_is_list($children)) {
                 throw new \UnexpectedValueException;

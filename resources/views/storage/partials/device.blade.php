@@ -4,6 +4,8 @@
             <dt>{{ $label }}</dt>
             <dd>{{ $device[$field] ?? '—' }}</dd>
         @endforeach
+        <dt>Tabla de particiones (PTTYPE)</dt>
+        <dd>{{ $device['partition_table'] }}</dd>
         <dt>MOUNTPOINTS</dt>
         <dd>{{ implode(', ', array_filter($device['mountpoints'] ?? [], fn ($mount) => $mount !== null && $mount !== '')) ?: '—' }}</dd>
     </dl>

@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Services\Storage\DfRunner;
+use App\Services\Storage\FindmntRunner;
+use App\Services\Storage\FstabReader;
 use App\Services\Storage\LsblkRunner;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -12,6 +14,8 @@ class StorageOccupancyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->mock(FindmntRunner::class)->shouldReceive('run')->andReturn('{"filesystems":[]}');
+        $this->mock(FstabReader::class)->shouldReceive('read')->andReturn('');
         $this->mock(LsblkRunner::class)->shouldReceive('run')->once()->andReturn('{"blockdevices":[]}');
     }
 
