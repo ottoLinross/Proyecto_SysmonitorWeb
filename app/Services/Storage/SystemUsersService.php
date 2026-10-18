@@ -20,12 +20,13 @@ class SystemUsersService
                     }
                 }
             }
-        } catch (\RuntimeException) {
+        } catch (\Throwable) {
             // Missing or unreadable login.defs uses the documented default of 1000.
         }
 
         $users = [];
         $available = true;
+        $status = 'Disponible';
         try {
             foreach (explode("\n", $this->reader->passwd()) as $line) {
                 $fields = explode(':', rtrim($line, "\r"));
@@ -50,11 +51,13 @@ class SystemUsersService
                 ];
             }
             usort($users, fn (array $a, array $b) => ($a['uid'] <=> $b['uid']) ?: strcmp($a['username'], $b['username']) ?: ($a['gid'] <=> $b['gid']) ?: strcmp($a['home'], $b['home']) ?: strcmp($a['shell'], $b['shell']));
-        } catch (\RuntimeException) {
+        } catch (\Throwable) {
             $available = false;
+            $status = 'Error de lectura';
+            $users = [];
         }
 
-        return ['available' => $available, 'users' => $users, 'uid_min' => $uidMin, 'fallback' => $fallback];
+        return ['available' => $available, 'status' => $status, 'users' => $users, 'uid_min' => $uidMin, 'fallback' => $fallback];
     }
 
     private function identifier(string $value): ?int

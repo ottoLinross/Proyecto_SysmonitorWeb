@@ -50,7 +50,7 @@ class StorageSessionsTest extends TestCase
     public function test_parses_mocked_output_and_renders_sessions(string $output, array $expected): void
     {
         $this->mock(WhoRunner::class)->shouldReceive('run')->twice()->andReturn($output);
-        $this->assertSame(['available' => true, 'sessions' => $expected], app(ActiveSessionsService::class)->sessions());
+        $this->assertSame(['available' => true, 'status' => 'Disponible', 'sessions' => $expected], app(ActiveSessionsService::class)->sessions());
         $response = $this->get('/almacenamiento')->assertOk()->assertSeeText('Sesiones activas');
         if ($expected === []) {
             $response->assertSeeText('No hay sesiones activas reportadas.')->assertDontSeeText('No se pudieron consultar las sesiones activas.');

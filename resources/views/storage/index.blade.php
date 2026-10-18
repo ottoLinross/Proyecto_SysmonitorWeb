@@ -14,6 +14,10 @@
         .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 24px; margin-top: 24px; }
         section { min-width: 0; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
         section[aria-labelledby="explorer-title"], section[aria-labelledby="sessions-title"], section[aria-labelledby="usage-title"], section[aria-labelledby="users-title"], section[aria-labelledby="mounts-title"] { grid-column: 1 / -1; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px; }
+        .summary-grid div { padding: 12px; background: #f3f5f8; border-radius: 6px; }
+        .summary-grid dt { font-weight: 600; }
+        .summary-grid dd { margin: 8px 0 0; overflow-wrap: anywhere; }
         .table-scroll { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #cbd5e1; white-space: nowrap; }
@@ -30,7 +34,9 @@
             <h1>Almacenamiento</h1>
             <p>Discos y particiones del servidor Debian.</p>
             <p>Consulta de solo lectura mediante lsblk, df, findmnt, who, /etc/fstab, /etc/passwd y /etc/login.defs.</p>
+            <p><a href="{{ route('storage.index', ['path' => $explorer['available'] ? $explorer['path'] : '']) }}">Actualizar información</a></p>
         </header>
+        @include('storage.partials.summary')
         <div class="panels">
             @foreach ($sections as $id => $title)
                 <section aria-labelledby="{{ $id }}-title">

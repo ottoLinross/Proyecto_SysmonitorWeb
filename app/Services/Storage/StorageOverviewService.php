@@ -14,9 +14,9 @@ class StorageOverviewService
                 throw new \UnexpectedValueException;
             }
 
-            return ['available' => true, 'devices' => $this->normalize($data->blockdevices)];
-        } catch (\Throwable) {
-            return ['available' => false, 'devices' => []];
+            return ['available' => true, 'status' => 'Disponible', 'devices' => $this->normalize($data->blockdevices)];
+        } catch (\Throwable $exception) {
+            return ['available' => false, 'status' => StorageSourceStatus::failure($exception), 'devices' => []];
         }
     }
 

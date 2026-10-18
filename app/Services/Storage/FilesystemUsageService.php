@@ -34,9 +34,9 @@ class FilesystemUsageService
                 );
             }
 
-            return ['available' => true, 'filesystems' => $filesystems];
-        } catch (\Throwable) {
-            return ['available' => false, 'filesystems' => []];
+            return ['available' => true, 'status' => 'Disponible', 'filesystems' => $filesystems];
+        } catch (\Throwable $exception) {
+            return ['available' => false, 'status' => StorageSourceStatus::failure($exception), 'filesystems' => []];
         }
     }
 }

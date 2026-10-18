@@ -28,9 +28,9 @@ class MountService
                 $mounts[] = $row;
             }
 
-            return ['available' => true, 'mounts' => $mounts];
-        } catch (\Throwable) {
-            return ['available' => false, 'mounts' => []];
+            return ['available' => true, 'status' => 'Disponible', 'mounts' => $mounts];
+        } catch (\Throwable $exception) {
+            return ['available' => false, 'status' => StorageSourceStatus::failure($exception), 'mounts' => []];
         }
     }
 
@@ -57,9 +57,9 @@ class MountService
                 ];
             }
 
-            return ['available' => true, 'mounts' => $mounts];
-        } catch (\Throwable) {
-            return ['available' => false, 'mounts' => []];
+            return ['available' => true, 'status' => 'Disponible', 'mounts' => $mounts];
+        } catch (\Throwable $exception) {
+            return ['available' => false, 'status' => StorageSourceStatus::failure($exception), 'mounts' => []];
         }
     }
 }

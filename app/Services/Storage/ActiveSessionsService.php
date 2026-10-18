@@ -27,9 +27,9 @@ class ActiveSessionsService
                 ];
             }
 
-            return ['available' => true, 'sessions' => $sessions];
-        } catch (\Throwable) {
-            return ['available' => false, 'sessions' => []];
+            return ['available' => true, 'status' => 'Disponible', 'sessions' => $sessions];
+        } catch (\Throwable $exception) {
+            return ['available' => false, 'status' => StorageSourceStatus::failure($exception), 'sessions' => []];
         }
     }
 }
