@@ -74,6 +74,7 @@ class StorageOverviewService
             'mounts' => 'Puntos de montaje',
             'users' => 'Usuarios del sistema',
             'sessions' => 'Sesiones activas',
+            'explorer' => 'Explorador de archivos',
         ];
     }
 }

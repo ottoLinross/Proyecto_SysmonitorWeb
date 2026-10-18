@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Storage\DfRunner;
+use App\Services\Storage\FileExplorerService;
 use App\Services\Storage\FindmntRunner;
 use App\Services\Storage\FstabReader;
 use App\Services\Storage\LsblkRunner;
@@ -16,6 +17,7 @@ class StorageOccupancyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->mock(FileExplorerService::class)->shouldReceive('browse')->andReturn(['available' => true, 'path' => '', 'parent' => null, 'entries' => [], 'message' => null]);
         $this->mock(WhoRunner::class)->shouldReceive('run')->andReturn('');
         $this->mock(SystemUsersReader::class)->shouldReceive('passwd')->andReturn('')->getMock()->shouldReceive('loginDefs')->andReturn('UID_MIN 1000');
         $this->mock(FindmntRunner::class)->shouldReceive('run')->andReturn('{"filesystems":[]}');

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Services\Storage\ActiveSessionsService;
 use App\Services\Storage\DfRunner;
+use App\Services\Storage\FileExplorerService;
 use App\Services\Storage\FindmntRunner;
 use App\Services\Storage\FstabReader;
 use App\Services\Storage\LsblkRunner;
@@ -19,6 +20,7 @@ class StorageSessionsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->mock(FileExplorerService::class)->shouldReceive('browse')->andReturn(['available' => true, 'path' => '', 'parent' => null, 'entries' => [], 'message' => null]);
         $this->mock(LsblkRunner::class)->shouldReceive('run')->andReturn('{"blockdevices":[]}');
         $this->mock(DfRunner::class)->shouldReceive('run')->andReturn("Filesystem Size Used Avail Use% Mounted on\n");
         $this->mock(FindmntRunner::class)->shouldReceive('run')->andReturn('{"filesystems":[]}');
