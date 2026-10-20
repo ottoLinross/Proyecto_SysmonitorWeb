@@ -7,7 +7,9 @@ use App\Http\Controllers\DeadlockRecoveryController;
 use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\SchedulingHistoryController;
+use App\Http\Controllers\StorageController;
 use App\Http\Controllers\TestProcessController;
+use App\Http\Middleware\AuthenticateStorage;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -15,6 +17,7 @@ Route::get('/', function () {
 });
 
 Route::get('/procesos', [ProcessController::class, 'index'])->name('processes.index');
+Route::get('/almacenamiento', [StorageController::class, 'index'])->middleware(AuthenticateStorage::class)->name('storage.index');
 Route::get('/interbloqueos', [DeadlockController::class, 'index'])->name('deadlocks.index');
 Route::post('/interbloqueos', [DeadlockController::class, 'validateScenario'])->name('deadlocks.validate');
 Route::post('/interbloqueos/solicitudes', [DeadlockController::class, 'evaluateRequest'])->name('deadlocks.request');
