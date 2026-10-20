@@ -22,14 +22,20 @@ class FileExplorerService
             if ($directory === false || ! $this->withinRoot($directory, $root) || ! is_dir($directory) || ! is_readable($directory)) {
                 return $failure;
             }
+            if (! $this->visibleCanonicalPath($directory, $root)) {
+                return $failure;
+            }
             $relative = $directory === $root ? '' : substr($directory, strlen(rtrim($root, DIRECTORY_SEPARATOR)) + 1);
             $entries = [];
             foreach ($this->directoryEntries($directory) as $name) {
-                if ($name === '.' || $name === '..') {
+                if (str_starts_with($name, '.')) {
                     continue;
                 }
                 $entryPath = $directory.DIRECTORY_SEPARATOR.$name;
                 $canonical = @realpath($entryPath);
+                if ($canonical !== false && $this->withinRoot($canonical, $root) && ! $this->visibleCanonicalPath($canonical, $root)) {
+                    continue;
+                }
                 $link = @is_link($entryPath);
                 $isDirectory = $canonical !== false && $this->withinRoot($canonical, $root) && is_dir($canonical);
                 $target = $relative === '' ? $name : $relative.'/'.$name;
@@ -116,7 +122,12 @@ class FileExplorerService
             && ! str_starts_with($path, '/')
             && ! preg_match('/^[a-zA-Z]:/', $path)
             && ! preg_match('/%(?:2e|2f|5c|00|25)/i', $path)
-            && ! in_array('..', explode('/', $path), true);
+            && count(array_filter(explode('/', $path), fn (string $part) => $part !== '.' && str_starts_with($part, '.'))) === 0;
+    }
+
+    private function visibleCanonicalPath(string $path, string $root): bool
+    {
+        return $path === $root || $this->validRelativePath(substr($path, strlen(rtrim($root, DIRECTORY_SEPARATOR)) + 1));
     }
 
     private function withinRoot(string $path, string $root): bool

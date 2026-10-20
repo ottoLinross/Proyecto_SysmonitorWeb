@@ -12,9 +12,9 @@ use App\Services\Storage\WhoRunner;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
-use Tests\TestCase;
+use Tests\Support\StorageTestCase;
 
-class StorageSummaryTest extends TestCase
+class StorageSummaryTest extends StorageTestCase
 {
     protected function setUp(): void
     {

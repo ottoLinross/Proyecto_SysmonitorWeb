@@ -13,9 +13,9 @@ use App\Services\Storage\WhoRunner;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Symfony\Component\Process\Process;
-use Tests\TestCase;
+use Tests\Support\StorageTestCase;
 
-class StorageLsblkTest extends TestCase
+class StorageLsblkTest extends StorageTestCase
 {
     protected function setUp(): void
     {

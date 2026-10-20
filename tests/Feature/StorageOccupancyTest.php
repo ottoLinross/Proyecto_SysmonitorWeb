@@ -10,9 +10,9 @@ use App\Services\Storage\LsblkRunner;
 use App\Services\Storage\SystemUsersReader;
 use App\Services\Storage\WhoRunner;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Tests\TestCase;
+use Tests\Support\StorageTestCase;
 
-class StorageOccupancyTest extends TestCase
+class StorageOccupancyTest extends StorageTestCase
 {
     protected function setUp(): void
     {

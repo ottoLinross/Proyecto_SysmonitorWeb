@@ -11,9 +11,9 @@ use App\Services\Storage\SystemUsersReader;
 use App\Services\Storage\SystemUsersService;
 use App\Services\Storage\WhoRunner;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Tests\TestCase;
+use Tests\Support\StorageTestCase;
 
-class StorageUsersTest extends TestCase
+class StorageUsersTest extends StorageTestCase
 {
     protected function setUp(): void
     {

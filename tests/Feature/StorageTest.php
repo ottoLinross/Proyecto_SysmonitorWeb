@@ -12,9 +12,9 @@ use App\Services\Storage\SystemUsersReader;
 use App\Services\Storage\WhoRunner;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use Tests\TestCase;
+use Tests\Support\StorageTestCase;
 
-class StorageTest extends TestCase
+class StorageTest extends StorageTestCase
 {
     protected function setUp(): void
     {

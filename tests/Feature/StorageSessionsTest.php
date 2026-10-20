@@ -13,9 +13,9 @@ use App\Services\Storage\WhoRunner;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Process\Process;
-use Tests\TestCase;
+use Tests\Support\StorageTestCase;
 
-class StorageSessionsTest extends TestCase
+class StorageSessionsTest extends StorageTestCase
 {
     protected function setUp(): void
     {

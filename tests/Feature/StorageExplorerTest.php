@@ -11,9 +11,9 @@ use App\Services\Storage\SystemUsersReader;
 use App\Services\Storage\WhoRunner;
 use Illuminate\Http\UploadedFile;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Tests\TestCase;
+use Tests\Support\StorageTestCase;
 
-class StorageExplorerTest extends TestCase
+class StorageExplorerTest extends StorageTestCase
 {
     private string $sandbox;
 
@@ -57,6 +57,25 @@ class StorageExplorerTest extends TestCase
         };
         $remove($this->sandbox);
         parent::tearDown();
+    }
+
+    public function test_hidden_entries_and_symlink_aliases_are_not_exposed_or_navigable(): void
+    {
+        mkdir($this->root.'/.git');
+        mkdir($this->root.'/.credentials');
+        file_put_contents($this->root.'/.env', 'test fixture');
+        file_put_contents($this->root.'/.git/config', 'test fixture');
+        symlink($this->root.'/.git', $this->root.'/alias');
+        symlink($this->root.'/.env', $this->root.'/alias-file');
+        $names = array_column(app(FileExplorerService::class)->browse()['entries'], 'name');
+        foreach (['.env', '.git', '.credentials', 'alias', 'alias-file'] as $name) {
+            $this->assertNotContains($name, $names);
+        }
+        foreach (['.env', '.git', '.git/config', './.git', 'sub/../.git', '.credentials', 'alias', 'alias/./', '%2egit'] as $path) {
+            $this->assertFalse(app(FileExplorerService::class)->browse($path)['available']);
+            $this->get('/almacenamiento?'.http_build_query(['path' => $path]))->assertOk()
+                ->assertSeeText('No se pudo acceder al directorio solicitado.')->assertDontSeeText('test fixture');
+        }
     }
 
     public function test_root_listing_is_sorted_and_files_cannot_be_opened(): void

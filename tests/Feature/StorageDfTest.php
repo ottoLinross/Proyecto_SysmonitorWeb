@@ -13,9 +13,9 @@ use App\Services\Storage\WhoRunner;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Symfony\Component\Process\Process;
-use Tests\TestCase;
+use Tests\Support\StorageTestCase;
 
-class StorageDfTest extends TestCase
+class StorageDfTest extends StorageTestCase
 {
     private const HEADER = "Filesystem Size Used Avail Use% Mounted on\n";
 

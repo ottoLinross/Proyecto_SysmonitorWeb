@@ -10,7 +10,7 @@ Las consultas reflejan el entorno donde se ejecuta PHP, que puede ser un contene
 
 ## 2. Arquitectura y archivos de referencia
 
-El flujo es: petición GET → `StorageController@index` → servicios independientes → normalización de datos → `StorageSummaryService` → vistas Blade. No se añade JavaScript, AJAX ni persistencia propia de M5. La configuración general de sesiones y middleware de Laravel sigue siendo aplicable.
+El flujo es: petición GET → `AuthenticateStorage` → `StorageController@index` → servicios independientes → normalización de datos → `StorageSummaryService` → vistas Blade. No se añade JavaScript, AJAX ni persistencia propia de M5. La configuración general de sesiones y middleware de Laravel sigue siendo aplicable.
 
 | Componente | Archivo, relativo a la raíz del proyecto | Responsabilidad |
 | --- | --- | --- |
@@ -37,10 +37,25 @@ El controlador construye `$sources` con las claves `devices`, `usage`, `mounts`,
 La definición existente es:
 
 ```php
-Route::get('/almacenamiento', [StorageController::class, 'index'])->name('storage.index');
+Route::get('/almacenamiento', [StorageController::class, 'index'])->middleware(\App\Http\Middleware\AuthenticateStorage::class)->name('storage.index');
 ```
 
-Laravel registra GET y HEAD. La ruta pertenece al grupo `web`; no declara middleware de autenticación ni autorización específico. No debe confundirse el confinamiento del explorador con control de acceso a la página. El entorno de despliegue debe decidir quién puede consultar nombres de archivos, cuentas, rutas de montaje y metadatos del servidor.
+Laravel registra GET y HEAD. Ambas requieren HTTP Basic mediante `AuthenticateStorage`, exclusivamente en M5. Antes de ejecutar el controlador o consultar fuentes, compara el usuario con `hash_equals()` y verifica la contraseña con `password_verify()`. Credenciales ausentes, incorrectas o configuración vacía/inválida reciben 401 con `WWW-Authenticate: Basic realm="SysMonitor M5", charset="UTF-8"` y un cuerpo genérico. Los parámetros HTTP no autentican. Las respuestas usan `Cache-Control: no-store`.
+
+### Configuración de acceso
+
+Definir fuera del repositorio, en el entorno de despliegue:
+
+```dotenv
+M5_BASIC_USERNAME=usuario-autorizado
+M5_BASIC_PASSWORD_HASH='HASH_GENERADO_FUERA_DEL_REPOSITORIO'
+```
+
+El marcador anterior no es un hash válido y bloquea el acceso. Generar el hash con `password_hash()` y `PASSWORD_DEFAULT` en un entorno seguro, con una contraseña robusta; no guardar contraseñas ni hashes de despliegue en archivos versionados ni en comandos que queden en el historial. Conservar el hash completo, entre comillas simples si se utiliza un archivo de entorno. Laravel lee estas variables exclusivamente en `config/storage_access.php`; al cambiar valores, regenerar la caché de configuración según el procedimiento del despliegue (`php artisan config:cache`). No hay credenciales predeterminadas ni cuentas nuevas.
+
+En despliegues públicos es **obligatorio HTTPS**, mediante IP o dominio, con certificado válido y sin acceso alternativo por HTTP. Basic codifica las credenciales en Base64, no las cifra: se transmiten en cada petición. Configurar el servidor o proxy para entregar Authorization a PHP y no registrarla. Basic usa un único usuario autorizado compartido: no ofrece roles, MFA, auditoría individual, bloqueo de intentos ni cierre de sesión fiable (el navegador puede conservar credenciales). Restringir el acceso por red y limitar intentos en el proxy cuando corresponda. Esta protección cubre solo M5; no convierte M1–M4 en módulos autenticados.
+
+El explorador omite todas las entradas que empiezan por punto, incluyendo `.env`, `.git` y sus variantes. También rechaza componentes ocultos en `path` y alias simbólicos cuyo destino canónico dentro del proyecto contenga componentes ocultos. Conserva el confinamiento canónico a la raíz y las operaciones de solo lectura. No es una clasificación exhaustiva de secretos: archivos sensibles con nombres visibles requieren una política adicional de despliegue.
 
 Ejemplos:
 
@@ -338,21 +353,21 @@ Los fixtures se crean en temporales durante los tests; no es necesario alterar d
 
 **¿Qué protege el límite de 1 MiB?** Reduce el riesgo de procesar salidas o archivos de configuración excesivos. En procesos incluye ambos flujos, no 1 MiB para cada uno. No es una cuota de todo el sistema ni evita todas las condiciones de agotamiento.
 
-**¿La página está autenticada por M5?** No hay middleware de autenticación específico en la ruta actual. El acceso debe resolverse en el despliegue o en trabajo futuro autorizado.
+**¿La página está autenticada por M5?** Sí. El middleware exclusivo exige el único usuario autorizado y verifica su contraseña mediante hash; ver configuración y requisitos HTTPS en la sección 3.
 
-**¿Qué datos sensibles evita mostrar el explorador?** No devuelve contenidos de archivos, incluidos `.env` u otros archivos del proyecto. Sí muestra sus nombres y metadatos si son visibles en el directorio; no existe un filtro que oculte todos los nombres sensibles.
+**¿Qué datos sensibles evita mostrar el explorador?** No devuelve contenidos de archivos, incluidos `.env` u otros archivos del proyecto. Omite nombres y metadatos de entradas ocultas y alias internos hacia ellas. No clasifica automáticamente todos los nombres visibles como sensibles.
 
 **¿Se modificaron los módulos anteriores en el cierre?** El alcance de este prompt es documentación y validación: solo se crea esta guía y se añade su enlace al README. No se cambian implementaciones ni pruebas de M1–M4.
 
 ## 16. Límites conocidos y consideraciones para M6
 
-- No hay autenticación, autorización ni rate limiting específicos de M5. No se incorporan en este cierre; deben definirse antes de ampliar acceso o capacidades.
+- M5 exige HTTP Basic para un único usuario autorizado. No incorpora rate limiting ni cuentas individuales; HTTPS público es obligatorio.
 - Los permisos son los de PHP; no se utiliza sudo ni elevación. La extensión POSIX es opcional para resolver propietarios.
 - Rutas `/usr/bin/*` y formatos GNU están fijados para el entorno Debian previsto. Otras plataformas/versiones pueden producir una fuente no disponible o un error de lectura.
 - Las lecturas son instantáneas independientes, no una transacción coherente del estado del sistema. Pueden cambiar entre comandos.
 - Hay límites de 1 MiB para comandos y archivos de configuración, pero el explorador usa scandir sin paginación ni límite explícito de entradas. Un directorio enorme puede consumir recursos; el orden es binario con strcmp, no una ordenación lingüística.
 - Los timeouts no cubren globalmente toda la petición, scandir ni la resolución de propietarios. No hay caché, monitorización continua, historial ni alertas.
-- realpath y las verificaciones posteriores no eliminan todas las carreras con escritores concurrentes. El explorador tampoco implementa ocultación de nombres sensibles ni validación UTF-8 específica para nombres arbitrarios del sistema de archivos; los nombres Unicode válidos están probados y Blade escapa la presentación.
+- realpath y las verificaciones posteriores no eliminan todas las carreras con escritores concurrentes. El explorador oculta entradas que empiezan por punto, pero no clasifica todos los nombres visibles sensibles ni implementa validación UTF-8 específica para nombres arbitrarios del sistema de archivos; los nombres Unicode válidos están probados y Blade escapa la presentación.
 - Los parsers tolerantes pueden omitir filas textuales malformadas sin un estado de degradación. df rechaza toda la fuente ante una fila inválida o un porcentaje fuera de 0–100.
 - No se calculan capacidad global, tamaños recursivos, espacio físico por archivo, ACL, cuotas, salud SMART ni integridad de tablas de particiones.
 - El cierre no inspecciona historial Git ni certifica un despliegue remoto. Las fuentes reales de verificación son los archivos de código, Blade, rutas y tests de este checkout, más las ejecuciones locales registradas abajo. No se requiere documentación web para describir este contrato local.
@@ -374,3 +389,8 @@ Validación local ejecutada durante el cierre, el 18 de octubre de 2026. Estos r
 Las dos ejecuciones de tests no reportaron errores, advertencias ni pruebas omitidas. Las duraciones de tabla son las publicadas por Artisan, no tiempos estimados. El filtro Storage incluye los casos añadidos en el hardening y su ampliación: límite combinado de ambos flujos y lectura explícita de archivo vacío.
 
 La auditoría de cierre revisó los servicios enumerados, el controlador, la ruta, los parciales Blade y las pruebas existentes. No encontró un defecto indispensable que exigiera modificar funcionalidad en este prompt. No se crearon ni modificaron pruebas; tampoco implementaciones de M5 o de M1–M4. Los únicos cambios del cierre son este documento y un enlace breve en README.md. No se ejecutaron comandos Git, no se consultó ni modificó .git, no se modificó .env, no se instalaron dependencias y no se usó sudo. No se creó commit ni se hizo push. Queda pendiente revisión manual antes de cualquier publicación posterior.
+
+
+## Corrección de acceso M5
+
+La sección 3 describe la protección vigente. Los resultados de cierre anteriores son históricos y no representan la validación de esta corrección; consultar el reporte de revisión actual.
