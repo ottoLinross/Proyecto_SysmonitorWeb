@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\CpuMemoryController;
 use App\Http\Controllers\DeadlockController;
 use App\Http\Controllers\DeadlockHistoryController;
@@ -11,6 +12,10 @@ use App\Http\Controllers\StorageController;
 use App\Http\Controllers\TestProcessController;
 use App\Http\Middleware\AuthenticateStorage;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
+Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
+Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
 Route::get('/', function () {
     return view('welcome');
