@@ -5,6 +5,7 @@ use App\Http\Controllers\CpuMemoryController;
 use App\Http\Controllers\DeadlockController;
 use App\Http\Controllers\DeadlockHistoryController;
 use App\Http\Controllers\DeadlockRecoveryController;
+use App\Http\Controllers\M6\DashboardController;
 use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\SchedulingHistoryController;
@@ -19,9 +20,7 @@ Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('l
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
 Route::middleware('auth:web')->group(function () {
-    Route::get('/', function () {
-        return view('welcome');
-    });
+    Route::get('/', DashboardController::class);
 
     Route::get('/procesos', [ProcessController::class, 'index'])->name('processes.index');
     Route::get('/almacenamiento', [StorageController::class, 'index'])->middleware(AuthenticateStorage::class)->name('storage.index');
