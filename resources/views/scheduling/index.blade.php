@@ -1,32 +1,16 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Planificación de CPU — SysMonitor</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; background: #f3f5f8; color: #182332; font-family: system-ui, sans-serif; }
-        main { max-width: 1440px; margin: 0 auto; padding: 32px 20px; }
-        h1 { margin: 0 0 12px; font-size: 1.8rem; }
-        p { color: #526173; line-height: 1.5; }
-        section { margin-top: 24px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
-        .table-container { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
-        input, button { padding: 8px; font: inherit; }
-        input[type="number"] { width: 110px; }
-        button { margin-top: 12px; cursor: pointer; }
-        .errors { color: #991b1b; }
-        .gantt-track { display: flex; list-style: none; padding: 0; margin: 16px 0; min-width: 800px; }
-        .gantt-segment { flex-basis: 0; min-width: 0; padding: 12px 0; border: 1px solid #fff; background: #dbeafe; overflow: hidden; text-align: center; }
-        .gantt-segment span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .gantt-idle { background: #e2e8f0; }
-    </style>
-</head>
-<body>
-    <main>
-        <header>
+@extends('layouts.sysmonitor')
+
+@section('title', 'Planificación de CPU')
+
+@section('styles')
+    <style>.module-scheduling *{ box-sizing: border-box; }.module-scheduling{ margin: 0; background: #f3f5f8; color: #182332; font-family: system-ui, sans-serif; }.module-scheduling{ max-width: 1440px; margin: 0 auto; padding: 32px 20px; }.module-scheduling h1{ margin: 0 0 12px; font-size: 1.8rem; }.module-scheduling p{ color: #526173; line-height: 1.5; }.module-scheduling section{ margin-top: 24px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }.module-scheduling .table-container{ overflow-x: auto; }.module-scheduling table{ width: 100%; border-collapse: collapse; text-align: left; }.module-scheduling th, .module-scheduling td{ padding: 8px; border-bottom: 1px solid #e2e8f0; }.module-scheduling input, .module-scheduling button{ padding: 8px; font: inherit; }.module-scheduling input[type="number"]{ width: 110px; }.module-scheduling button{ margin-top: 12px; cursor: pointer; }.module-scheduling .errors{ color: #991b1b; }.module-scheduling .gantt-track{ display: flex; list-style: none; padding: 0; margin: 16px 0; min-width: 800px; }.module-scheduling .gantt-segment{ flex-basis: 0; min-width: 0; padding: 12px 0; border: 1px solid #fff; background: #dbeafe; overflow: hidden; text-align: center; }.module-scheduling .gantt-segment span{ display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.module-scheduling .gantt-idle{ background: #e2e8f0; }
+        </style>
+@endsection
+
+@section('content')
+    <div class="module-page module-scheduling">
+
+            <header>
             <p>SysMonitor · M3</p>
             <h1>Planificación de CPU</h1>
             <p>Estructura inicial del módulo de planificación de CPU.</p>
@@ -154,7 +138,11 @@
                 @endforeach
             @endif
         @endisset
-    </main>
+    
+    </div>
+@endsection
+
+@section('scripts')
     <script>
         const body = document.getElementById('process-inputs');
         const add = document.getElementById('add-process');
@@ -185,5 +173,4 @@
         });
         updateRows();
     </script>
-</body>
-</html>
+@endsection

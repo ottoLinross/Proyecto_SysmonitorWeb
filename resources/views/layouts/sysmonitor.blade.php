@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f4f7fb">
-    <title>@yield('title', 'Inicio') — {{ config('app.name', 'SysMonitor Web') }}</title>
+    <title>@yield('page-title', trim($__env->yieldContent('title', 'Inicio')).' — '.config('app.name', 'SysMonitor Web'))</title>
     <style>
         :root {
             color-scheme: light;
@@ -119,7 +119,8 @@
 
         <div class="sm-topbar-tools">
             @php
-                $currentRole = auth('web')->user()->role;
+                $layoutUser = auth('web')->user();
+                $currentRole = $layoutUser?->role;
                 $roleLabel = match ($currentRole) {
                     \App\Models\User::ROLE_ADMIN => 'Administrador',
                     \App\Models\User::ROLE_OBSERVER => 'Observador',
@@ -132,17 +133,19 @@
                     @include('partials.sysmonitor-navigation')
                 </div>
             </details>
-            <div class="sm-user" aria-label="Sesión de {{ auth('web')->user()->name }}">
+            <div class="sm-user" aria-label="Sesión de {{ $layoutUser?->name ?? 'Usuario' }}">
                 <div class="sm-user-copy">
-                    <span class="sm-user-name">{{ auth('web')->user()->name }}</span>
+                    <span class="sm-user-name">{{ $layoutUser?->name ?? 'Usuario' }}</span>
                     <span class="sm-user-role">Sesión activa</span>
                 </div>
                 <span class="sm-role-pill">{{ $roleLabel }}</span>
             </div>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button class="sm-logout" type="submit">Cerrar sesión</button>
-            </form>
+            @if (trim($__env->yieldContent('show-logout', 'yes')) !== 'no')
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button class="sm-logout" type="submit">Cerrar sesión</button>
+                </form>
+            @endif
         </div>
     </header>
 

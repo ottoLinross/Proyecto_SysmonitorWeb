@@ -1,71 +1,16 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Módulo de Procesos</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; background: #f3f5f8; color: #182332; font-family: system-ui, sans-serif; }
-        main { max-width: 1440px; margin: 0 auto; padding: 32px 20px; }
-        h1 { margin: 0 0 12px; font-size: 1.8rem; }
-        .description { margin: 0 0 24px; color: #526173; }
-        .state-summary { margin-bottom: 24px; }
-        .state-summary h2 { margin: 0 0 8px; font-size: 1.2rem; }
-        .state-summary p { margin: 0 0 16px; color: #526173; }
-        .state-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 0; }
-        .state-card { padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
-        .state-card dt { color: #526173; }
-        .state-card dd { margin: 8px 0 0; font-size: 1.8rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-        .search-form { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 20px; }
-        .search-form input[type="text"] { flex: 1; min-width: 180px; padding: 10px 12px; border: 1px solid #94a3b8; border-radius: 6px; font: inherit; }
-        .search-form button { padding: 10px 18px; border: 0; border-radius: 6px; background: #1d4ed8; color: #fff; font: inherit; cursor: pointer; }
-        a { color: #1d4ed8; }
-        th a { display: block; color: inherit; text-decoration: none; }
-        th a:hover { text-decoration: underline; }
-        .table-container { max-height: 70vh; overflow: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; }
-        .table-container:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
-        table { width: 100%; min-width: 1050px; border-spacing: 0; font-size: 0.9rem; }
-        caption { padding: 16px; text-align: left; font-weight: 600; }
-        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-        th { position: sticky; top: 0; background: #eaf0f6; white-space: nowrap; }
-        tbody tr:nth-child(even) { background: #f8fafc; }
-        tbody tr:hover { background: #eff6ff; }
-        tbody tr:last-child td { border-bottom: 0; }
-        .numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .command { min-width: 320px; white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
-        .empty { padding: 28px 16px; text-align: center; color: #526173; }
-        .process-tree { margin-top: 28px; }
-        .process-tree h2 { font-size: 1.2rem; }
-        .tree-container { max-height: 70vh; overflow: auto; padding: 16px; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; }
-        .tree-container:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
-        .tree-container ul { list-style: none; padding-left: 24px; margin: 0; min-width: max-content; }
-        .tree-container > ul { padding-left: 0; }
-        .tree-container li { margin: 8px 0; }
-        .tree-container li > ul { border-left: 1px solid #cbd5e1; margin-left: 8px; }
-        .tree-node { display: flex; gap: 12px; align-items: baseline; padding: 8px; }
-        .tree-command { max-width: 80ch; white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
-        .tree-meta { color: #526173; }
-        .test-processes { margin-top: 28px; }
-        .test-processes h2 { font-size: 1.2rem; }
-        .launch-form { margin: 16px 0; }
-        .launch-form button { padding: 10px 18px; border: 0; border-radius: 6px; background: #1d4ed8; color: #fff; font: inherit; cursor: pointer; }
-        .launch-form button:disabled { background: #64748b; cursor: not-allowed; }
-        .notice { padding: 12px 16px; border-radius: 6px; }
-        .notice-success { background: #dcfce7; color: #166534; }
-        .notice-error { background: #fee2e2; color: #991b1b; }
-        .managed-table { min-width: 750px; }
-        .signal-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-        .signal-form button { padding: 6px 8px; border: 1px solid #94a3b8; border-radius: 4px; background: #fff; color: #182332; cursor: pointer; }
-        .signal-form button:disabled { color: #64748b; cursor: not-allowed; opacity: 0.6; }
-        .priority-form { display: flex; align-items: center; gap: 8px; }
-        .priority-form input { width: 70px; padding: 6px; }
-        .priority-form button { padding: 6px 8px; white-space: nowrap; }
-    </style>
-</head>
-<body>
-    <main>
-        <h1 id="processes-title">Módulo de Procesos</h1>
+@extends('layouts.sysmonitor')
+
+@section('title', 'Procesos')
+
+@section('styles')
+    <style>.module-processes *{ box-sizing: border-box; }.module-processes{ margin: 0; background: #f3f5f8; color: #182332; font-family: system-ui, sans-serif; }.module-processes{ max-width: 1440px; margin: 0 auto; padding: 32px 20px; }.module-processes h1{ margin: 0 0 12px; font-size: 1.8rem; }.module-processes .description{ margin: 0 0 24px; color: #526173; }.module-processes .state-summary{ margin-bottom: 24px; }.module-processes .state-summary h2{ margin: 0 0 8px; font-size: 1.2rem; }.module-processes .state-summary p{ margin: 0 0 16px; color: #526173; }.module-processes .state-cards{ display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 0; }.module-processes .state-card{ padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }.module-processes .state-card dt{ color: #526173; }.module-processes .state-card dd{ margin: 8px 0 0; font-size: 1.8rem; font-weight: 600; font-variant-numeric: tabular-nums; }.module-processes .search-form{ display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 20px; }.module-processes .search-form input[type="text"]{ flex: 1; min-width: 180px; padding: 10px 12px; border: 1px solid #94a3b8; border-radius: 6px; font: inherit; }.module-processes .search-form button{ padding: 10px 18px; border: 0; border-radius: 6px; background: #1d4ed8; color: #fff; font: inherit; cursor: pointer; }.module-processes a{ color: #1d4ed8; }.module-processes th a{ display: block; color: inherit; text-decoration: none; }.module-processes th a:hover{ text-decoration: underline; }.module-processes .table-container{ max-height: 70vh; overflow: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; }.module-processes .table-container:focus-visible{ outline: 3px solid #2563eb; outline-offset: 3px; }.module-processes table{ width: 100%; min-width: 1050px; border-spacing: 0; font-size: 0.9rem; }.module-processes caption{ padding: 16px; text-align: left; font-weight: 600; }.module-processes th, .module-processes td{ padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: top; }.module-processes th{ position: sticky; top: 0; background: #eaf0f6; white-space: nowrap; }.module-processes tbody tr:nth-child(even){ background: #f8fafc; }.module-processes tbody tr:hover{ background: #eff6ff; }.module-processes tbody tr:last-child td{ border-bottom: 0; }.module-processes .numeric{ text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }.module-processes .command{ min-width: 320px; white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, monospace; }.module-processes .empty{ padding: 28px 16px; text-align: center; color: #526173; }.module-processes .process-tree{ margin-top: 28px; }.module-processes .process-tree h2{ font-size: 1.2rem; }.module-processes .tree-container{ max-height: 70vh; overflow: auto; padding: 16px; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; }.module-processes .tree-container:focus-visible{ outline: 3px solid #2563eb; outline-offset: 3px; }.module-processes .tree-container ul{ list-style: none; padding-left: 24px; margin: 0; min-width: max-content; }.module-processes .tree-container > ul{ padding-left: 0; }.module-processes .tree-container li{ margin: 8px 0; }.module-processes .tree-container li > ul{ border-left: 1px solid #cbd5e1; margin-left: 8px; }.module-processes .tree-node{ display: flex; gap: 12px; align-items: baseline; padding: 8px; }.module-processes .tree-command{ max-width: 80ch; white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, monospace; }.module-processes .tree-meta{ color: #526173; }.module-processes .test-processes{ margin-top: 28px; }.module-processes .test-processes h2{ font-size: 1.2rem; }.module-processes .launch-form{ margin: 16px 0; }.module-processes .launch-form button{ padding: 10px 18px; border: 0; border-radius: 6px; background: #1d4ed8; color: #fff; font: inherit; cursor: pointer; }.module-processes .launch-form button:disabled{ background: #64748b; cursor: not-allowed; }.module-processes .notice{ padding: 12px 16px; border-radius: 6px; }.module-processes .notice-success{ background: #dcfce7; color: #166534; }.module-processes .notice-error{ background: #fee2e2; color: #991b1b; }.module-processes .managed-table{ min-width: 750px; }.module-processes .signal-actions{ display: flex; flex-wrap: wrap; gap: 8px; }.module-processes .signal-form button{ padding: 6px 8px; border: 1px solid #94a3b8; border-radius: 4px; background: #fff; color: #182332; cursor: pointer; }.module-processes .signal-form button:disabled{ color: #64748b; cursor: not-allowed; opacity: 0.6; }.module-processes .priority-form{ display: flex; align-items: center; gap: 8px; }.module-processes .priority-form input{ width: 70px; padding: 6px; }.module-processes .priority-form button{ padding: 6px 8px; white-space: nowrap; }
+        </style>
+@endsection
+
+@section('content')
+    <div class="module-page module-processes">
+
+            <h1 id="processes-title">Módulo de Procesos</h1>
         <p class="description">Información actual de los procesos del sistema.</p>
         <section class="state-summary" aria-labelledby="state-summary-title">
             <h2 id="state-summary-title">Resumen por estados</h2>
@@ -210,6 +155,6 @@
                 </table>
             </div>
         </section>
-    </main>
-</body>
-</html>
+    
+    </div>
+@endsection

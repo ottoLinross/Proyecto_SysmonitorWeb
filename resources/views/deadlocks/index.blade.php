@@ -1,32 +1,17 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Interbloqueos — SysMonitor</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; background: #f3f5f8; color: #182332; font-family: system-ui, sans-serif; }
-        main { max-width: 1440px; margin: 0 auto; padding: 32px 20px; }
-        h1 { margin: 0 0 12px; font-size: 1.8rem; }
-        p { color: #526173; line-height: 1.5; }
-        section, form { margin-top: 24px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
-        label { display: block; margin-top: 16px; font-weight: 600; }
-        input, textarea, select, button { max-width: 100%; padding: 8px; font: inherit; }
-        textarea { display: block; width: 100%; font-family: monospace; }
-        button { margin-top: 20px; cursor: pointer; }
-        .errors { color: #991b1b; }
-        pre { overflow-x: auto; }
-        .table-container { overflow-x: auto; }
-        .table-container:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        caption { padding: 12px 0; text-align: left; font-weight: 600; }
-        th, td { padding: 12px; border-bottom: 1px solid #cbd5e1; vertical-align: top; }
-    </style>
-</head>
-<body>
-    <main>
-        <header>
+@extends('layouts.sysmonitor')
+
+@section('title', 'Interbloqueos')
+@section('page-title', 'Interbloqueos — SysMonitor')
+
+@section('styles')
+    <style>.module-deadlocks *{ box-sizing: border-box; }.module-deadlocks{ margin: 0; background: #f3f5f8; color: #182332; font-family: system-ui, sans-serif; }.module-deadlocks{ max-width: 1440px; margin: 0 auto; padding: 32px 20px; }.module-deadlocks h1{ margin: 0 0 12px; font-size: 1.8rem; }.module-deadlocks p{ color: #526173; line-height: 1.5; }.module-deadlocks section, .module-deadlocks form{ margin-top: 24px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }.module-deadlocks label{ display: block; margin-top: 16px; font-weight: 600; }.module-deadlocks input, .module-deadlocks textarea, .module-deadlocks select, .module-deadlocks button{ max-width: 100%; padding: 8px; font: inherit; }.module-deadlocks textarea{ display: block; width: 100%; font-family: monospace; }.module-deadlocks button{ margin-top: 20px; cursor: pointer; }.module-deadlocks .errors{ color: #991b1b; }.module-deadlocks pre{ overflow-x: auto; }.module-deadlocks .table-container{ overflow-x: auto; }.module-deadlocks .table-container:focus-visible{ outline: 3px solid #2563eb; outline-offset: 3px; }.module-deadlocks table{ width: 100%; border-collapse: collapse; text-align: left; }.module-deadlocks caption{ padding: 12px 0; text-align: left; font-weight: 600; }.module-deadlocks th, .module-deadlocks td{ padding: 12px; border-bottom: 1px solid #cbd5e1; vertical-align: top; }
+        </style>
+@endsection
+
+@section('content')
+    <div class="module-page module-deadlocks">
+
+            <header>
             <p>SysMonitor · M4</p>
             <h1>Interbloqueos</h1>
             <nav aria-label="Historial de M4"><a href="{{ route('deadlocks.history.index') }}">Simulaciones guardadas</a></nav>
@@ -191,6 +176,6 @@
             @include('deadlocks.partials.recovery')
             @include('deadlocks.partials.save-simulation')
         @endisset
-    </main>
-</body>
-</html>
+    
+    </div>
+@endsection

@@ -1,13 +1,11 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Simulaciones guardadas — M4</title>
-</head>
-<body>
-    <main>
-        <h1>Simulaciones educativas guardadas de M4</h1>
+@extends('layouts.sysmonitor')
+
+@section('title', 'Historial de interbloqueos')
+
+@section('content')
+    <div class="module-page module-deadlocks">
+
+            <h1>Simulaciones educativas guardadas de M4</h1>
         <p><a href="{{ route('deadlocks.index') }}">Volver al simulador de interbloqueos</a></p>
         <p>Los registros conservan escenarios educativos, no recursos reales. El detalle vuelve a validar y calcular sus resultados.</p>
         @if ($simulations->isEmpty())
@@ -29,6 +27,6 @@
             </div>
             {{ $simulations->links() }}
         @endif
-    </main>
-</body>
-</html>
+    
+    </div>
+@endsection
