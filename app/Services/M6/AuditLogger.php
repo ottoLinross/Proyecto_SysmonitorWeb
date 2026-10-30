@@ -51,13 +51,24 @@ class AuditLogger
         return $entry;
     }
 
-    public function finish(AuditLog $audit, string $status, ?string $result = null): AuditLog
-    {
+    public function finish(
+        AuditLog $audit,
+        string $status,
+        ?string $result = null,
+        ?string $targetId = null,
+        ?int $pid = null,
+    ): AuditLog {
         if (! in_array($status, [AuditLog::STATUS_SUCCESS, AuditLog::STATUS_FAILURE], true)) {
             throw new InvalidArgumentException('Audit records can only finish as success or failure.');
         }
         if ($result !== null && ! preg_match('/^[a-z][a-z0-9_]{0,79}$/D', $result)) {
             throw new InvalidArgumentException('Invalid audit result code.');
+        }
+        if ($targetId !== null && ! preg_match('/^[A-Za-z0-9_.:-]{1,128}$/D', $targetId)) {
+            throw new InvalidArgumentException('Invalid audit target identifier.');
+        }
+        if ($pid !== null && $pid < 1) {
+            throw new InvalidArgumentException('Invalid process identifier.');
         }
 
         $actor = $this->authorizedActor();
@@ -66,10 +77,18 @@ class AuditLogger
             throw new AuthorizationException('The audit record is not available to this administrator.');
         }
 
+        $changes = ['status' => $status, 'result' => $result, 'updated_at' => now()];
+        if ($targetId !== null) {
+            $changes['target_id'] = $targetId;
+        }
+        if ($pid !== null) {
+            $changes['pid'] = $pid;
+        }
+
         $updated = AuditLog::query()
             ->whereKey($stored->getKey())
             ->where('status', AuditLog::STATUS_PENDING)
-            ->update(['status' => $status, 'result' => $result, 'updated_at' => now()]);
+            ->update($changes);
 
         if ($updated !== 1) {
             throw new LogicException('Audit record is no longer pending or could not be finalized.');

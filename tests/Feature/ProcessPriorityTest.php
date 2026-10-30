@@ -31,7 +31,7 @@ class ProcessPriorityTest extends TestCase
     #[DataProvider('validValues')]
     public function test_valid_post_uses_registered_identity_and_verifies_nice(string $nice, int $exitCode): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record('stopped');
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) use ($nice, $exitCode) {
@@ -65,7 +65,7 @@ class ProcessPriorityTest extends TestCase
     #[DataProvider('invalidValues')]
     public function test_invalid_input_never_executes_renice(mixed $nice): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record();
         $this->mock(ProcessReniceRunner::class, function (MockInterface $mock) {
@@ -89,7 +89,7 @@ class ProcessPriorityTest extends TestCase
     #[DataProvider('identityErrors')]
     public function test_missing_or_mismatched_process_never_executes(bool $missing): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record();
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) use ($missing) {
@@ -118,7 +118,7 @@ class ProcessPriorityTest extends TestCase
 
     public function test_get_and_unregistered_url_ids_cannot_change_priority(): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record();
         $this->mock(ProcessReniceRunner::class, function (MockInterface $mock) {
@@ -133,7 +133,7 @@ class ProcessPriorityTest extends TestCase
 
     public function test_terminal_records_are_revalidated_and_rejected_by_the_backend(): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record('killed');
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
@@ -188,7 +188,7 @@ class ProcessPriorityTest extends TestCase
 
     public function test_internal_errors_are_displayed_as_a_generic_message(): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record();
         $this->mock(ProcessPriorityService::class, function (MockInterface $mock) {
@@ -222,5 +222,17 @@ class ProcessPriorityTest extends TestCase
         $this->partialMock(ProcessService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getProcesses')->once()->andReturn([]);
         });
+    }
+
+    private function admin(): User
+    {
+        $user = new User;
+        $user->name = 'M1 Priority Test Admin';
+        $user->email = uniqid('m1-priority-admin-', true).'@example.test';
+        $user->setRawAttributes(array_replace($user->getAttributes(), ['password' => '']));
+        $user->role = User::ROLE_ADMIN;
+        $user->save();
+
+        return $user;
     }
 }

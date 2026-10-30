@@ -31,7 +31,7 @@ class ProcessSignalTest extends TestCase
     #[DataProvider('signals')]
     public function test_post_sends_a_whitelisted_signal_using_the_bound_record(string $signal, int $number, string $status): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record($signal === 'cont' ? 'stopped' : 'running');
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
@@ -57,7 +57,7 @@ class ProcessSignalTest extends TestCase
     #[DataProvider('invalidSignals')]
     public function test_invalid_signal_input_is_rejected_before_the_service(mixed $signal): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record();
         $this->mock(ProcessSignalService::class, function (MockInterface $mock) {
@@ -88,7 +88,7 @@ class ProcessSignalTest extends TestCase
 
     public function test_a_pid_in_the_url_does_not_substitute_for_an_internal_record_id(): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record();
         $this->assertNotSame($process->id, $process->pid);
@@ -102,7 +102,7 @@ class ProcessSignalTest extends TestCase
 
     public function test_a_missing_process_updates_the_record_and_returns_a_safe_message(): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record();
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
@@ -122,7 +122,7 @@ class ProcessSignalTest extends TestCase
 
     public function test_a_reused_pid_updates_status_without_sending(): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record();
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
@@ -143,7 +143,7 @@ class ProcessSignalTest extends TestCase
 
     public function test_terminal_records_cannot_be_signalled_even_if_a_button_is_bypassed(): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record('terminated');
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
@@ -203,7 +203,7 @@ class ProcessSignalTest extends TestCase
 
     public function test_internal_errors_are_not_exposed(): void
     {
-        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+        $this->actingAs($this->admin(), 'web');
 
         $process = $this->record();
         $this->mock(ProcessSignalService::class, function (MockInterface $mock) {
@@ -234,5 +234,17 @@ class ProcessSignalTest extends TestCase
         $process->forceFill(['registration_signature' => app(ManagedProcessProvenance::class)->seal($process)])->save();
 
         return $process;
+    }
+
+    private function admin(): User
+    {
+        $user = new User;
+        $user->name = 'M1 Signal Test Admin';
+        $user->email = uniqid('m1-signal-admin-', true).'@example.test';
+        $user->setRawAttributes(array_replace($user->getAttributes(), ['password' => '']));
+        $user->role = User::ROLE_ADMIN;
+        $user->save();
+
+        return $user;
     }
 }
