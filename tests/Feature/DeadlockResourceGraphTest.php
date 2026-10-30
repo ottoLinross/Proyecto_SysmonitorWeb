@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Deadlock\ResourceGraph;
 use Tests\TestCase;
 
@@ -14,6 +15,8 @@ class DeadlockResourceGraphTest extends TestCase
 
     public function test_graph_is_only_shown_after_validation_and_preserves_existing_sections(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->get('/interbloqueos')->assertOk()->assertDontSeeText('Nodos del grafo');
         $this->post('/interbloqueos', $this->data())->assertOk()
             ->assertSeeText('Grafo de asignación de recursos')->assertSeeText('Nodos del grafo')
@@ -27,6 +30,8 @@ class DeadlockResourceGraphTest extends TestCase
 
     public function test_request_is_separate_and_graph_keeps_original_allocation_after_grant(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/interbloqueos/solicitudes', $this->data())->assertOk()
             ->assertSeeText('Request — Solicitud explícita')->assertSeeText('Estado simulado concedido')
             ->assertViewHas('graph', fn ($graph) => $graph->edges === [
@@ -38,6 +43,8 @@ class DeadlockResourceGraphTest extends TestCase
 
     public function test_rejected_explicit_request_is_still_identified(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['request'] = [2, 0];
         $this->post('/interbloqueos/solicitudes', $data)->assertOk()
@@ -47,6 +54,8 @@ class DeadlockResourceGraphTest extends TestCase
 
     public function test_malformed_request_keeps_graph_without_explicit_edges_and_escapes_content(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['request'] = '<script>alert(1)</script>';
         $this->post('/interbloqueos/solicitudes', $data)->assertUnprocessable()
@@ -56,6 +65,8 @@ class DeadlockResourceGraphTest extends TestCase
 
     public function test_empty_graph_has_accessible_description(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/interbloqueos', ['n' => 1, 'm' => 1, 'allocation' => [[0]], 'max' => [[0]], 'available' => [0]])
             ->assertOk()->assertSeeText('Sin aristas: todas las cantidades son cero.')
             ->assertViewHas('graph', fn ($graph) => count($graph->nodes) === 2 && $graph->edges === []);

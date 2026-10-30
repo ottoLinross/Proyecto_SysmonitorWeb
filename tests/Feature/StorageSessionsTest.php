@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Storage\ActiveSessionsService;
 use App\Services\Storage\DfRunner;
 use App\Services\Storage\FileExplorerService;
@@ -49,6 +50,8 @@ class StorageSessionsTest extends StorageTestCase
     #[DataProvider('sessionOutputs')]
     public function test_parses_mocked_output_and_renders_sessions(string $output, array $expected): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(WhoRunner::class)->shouldReceive('run')->twice()->andReturn($output);
         $this->assertSame(['available' => true, 'status' => 'Disponible', 'sessions' => $expected], app(ActiveSessionsService::class)->sessions());
         $response = $this->get('/almacenamiento')->assertOk()->assertSeeText('Sesiones activas');
@@ -66,6 +69,8 @@ class StorageSessionsTest extends StorageTestCase
 
     public function test_command_failure_is_unavailable_and_preserves_other_sections(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(WhoRunner::class)->shouldReceive('run')->once()->andThrow(new \RuntimeException('internal secret'));
         $this->get('/almacenamiento')->assertOk()->assertSeeText('No se pudieron consultar las sesiones activas.')
             ->assertDontSeeText('internal secret')->assertDontSeeText('No hay sesiones activas reportadas.')
@@ -75,6 +80,8 @@ class StorageSessionsTest extends StorageTestCase
 
     public function test_html_is_escaped_and_http_parameters_cannot_trigger_writes(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         DB::shouldReceive('connection')->never();
         $this->mock(WhoRunner::class)->shouldReceive('run')->once()
             ->andReturn('<script>user</script> <terminal> 2026-10-18 08:30 (<img src=x onerror=alert(1)>)');

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ManagedProcess;
+use App\Models\User;
 use App\Services\System\ApplicationProcessUid;
 use App\Services\System\ManagedProcessProvenance;
 use App\Services\System\ProcessService;
@@ -30,6 +31,8 @@ class ProcessSignalTest extends TestCase
     #[DataProvider('signals')]
     public function test_post_sends_a_whitelisted_signal_using_the_bound_record(string $signal, int $number, string $status): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record($signal === 'cont' ? 'stopped' : 'running');
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
             $mock->shouldReceive('read')->with(42)->once()->andReturn($this->identity());
@@ -54,6 +57,8 @@ class ProcessSignalTest extends TestCase
     #[DataProvider('invalidSignals')]
     public function test_invalid_signal_input_is_rejected_before_the_service(mixed $signal): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record();
         $this->mock(ProcessSignalService::class, function (MockInterface $mock) {
             $mock->shouldNotReceive('send');
@@ -83,6 +88,8 @@ class ProcessSignalTest extends TestCase
 
     public function test_a_pid_in_the_url_does_not_substitute_for_an_internal_record_id(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record();
         $this->assertNotSame($process->id, $process->pid);
         $this->mock(ProcessSignalService::class, function (MockInterface $mock) {
@@ -95,6 +102,8 @@ class ProcessSignalTest extends TestCase
 
     public function test_a_missing_process_updates_the_record_and_returns_a_safe_message(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record();
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
             $mock->shouldReceive('read')->with(42)->once()->andThrow(new RuntimeException('internal /proc detail'));
@@ -113,6 +122,8 @@ class ProcessSignalTest extends TestCase
 
     public function test_a_reused_pid_updates_status_without_sending(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record();
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
             $mock->shouldReceive('read')->with(42)->once()->andReturn([
@@ -132,6 +143,8 @@ class ProcessSignalTest extends TestCase
 
     public function test_terminal_records_cannot_be_signalled_even_if_a_button_is_bypassed(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record('terminated');
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
             $mock->shouldReceive('read')->with(42)->once()->andReturn($this->identity());
@@ -147,6 +160,8 @@ class ProcessSignalTest extends TestCase
 
     public function test_signal_forms_use_post_csrf_internal_ids_and_no_pid_fields(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $active = $this->record();
         $inactive = $this->record('missing', 43);
         $this->partialMock(ProcessService::class, function (MockInterface $mock) {
@@ -188,6 +203,8 @@ class ProcessSignalTest extends TestCase
 
     public function test_internal_errors_are_not_exposed(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record();
         $this->mock(ProcessSignalService::class, function (MockInterface $mock) {
             $mock->shouldReceive('send')->once()->andThrow(new RuntimeException('internal signal detail'));

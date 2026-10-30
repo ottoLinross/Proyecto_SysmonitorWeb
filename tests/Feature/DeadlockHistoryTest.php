@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\DeadlockSimulation;
+use App\Models\User;
 use App\Services\Deadlock\BankerSafetyAnalyzer;
 use App\Services\Deadlock\DeadlockSimulationStore;
 use App\Services\Deadlock\NeedCalculator;
@@ -42,6 +43,8 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_complete_workflow_uses_rendered_forms_and_persists_only_original_scenarios(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->app->bind(ValidateCsrfToken::class, fn ($app) => new class($app, $app['encrypter']) extends ValidateCsrfToken
         {
             protected function runningUnitTests()
@@ -115,6 +118,8 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_save_normalizes_only_validated_scenario_and_redirects_with_success_message(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data() + ['id' => 80, 'need' => [[999]], 'is_safe' => false, 'request' => [1, 0], 'strategy' => 'victim', 'password' => 'discard-me'];
         $this->post('/interbloqueos/historial', $data)->assertRedirect('/interbloqueos/historial/1')
             ->assertSessionHas('deadlockSaved', 'Simulación educativa guardada correctamente.');
@@ -131,6 +136,8 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_detail_revalidates_and_recalculates_safety_need_and_steps(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $input = new ScenarioInput;
         $store = new DeadlockSimulationStore($input);
         $saved = $store->save($this->data());
@@ -153,6 +160,8 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_empty_history_and_pagination_use_deterministic_descending_id_order(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->get('/interbloqueos/historial')->assertOk()->assertSeeText('No hay simulaciones guardadas.');
         $store = $this->app->make(DeadlockSimulationStore::class);
         for ($i = 0; $i < 21; $i++) {
@@ -166,6 +175,8 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_reads_new_saves_and_new_simulations_never_modify_previous_records(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/interbloqueos/historial', $this->data())->assertRedirect();
         $first = DeadlockSimulation::query()->sole();
         $before = $first->getRawOriginal();
@@ -207,6 +218,8 @@ class DeadlockHistoryTest extends TestCase
     #[DataProvider('invalidScenarios')]
     public function test_invalid_scenarios_never_write(string $field, mixed $value, string $error): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data[$field] = $value;
         $this->postJson('/interbloqueos/historial', $data)->assertUnprocessable()->assertJsonValidationErrors($error);
@@ -225,6 +238,8 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_body_limits_and_untrimmed_values_are_enforced(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['extra'] = str_repeat('x', ScenarioInput::MAX_PAYLOAD_BYTES);
         $this->post('/interbloqueos/historial', $data)->assertStatus(413)->assertSessionMissing('_old_input');
@@ -245,6 +260,8 @@ class DeadlockHistoryTest extends TestCase
     #[DataProvider('invalidIds')]
     public function test_invalid_identifiers_are_rejected_before_querying(string $id): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $connection = (new DeadlockSimulation)->getConnection();
         $connection->enableQueryLog();
         $this->get('/interbloqueos/historial/'.rawurlencode($id))->assertNotFound()
@@ -254,11 +271,15 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_nonexistent_identifier_has_a_clear_404(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->get('/interbloqueos/historial/999')->assertNotFound()->assertSeeText('La simulación solicitada no existe.');
     }
 
     public function test_corrupt_stored_json_is_revalidated_instead_of_being_analyzed_or_updated(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $saved = $this->app->make(DeadlockSimulationStore::class)->save($this->data());
         // Deliberately corrupt only this isolated test record using a parameterized Eloquent update.
         DeadlockSimulation::query()->whereKey($saved->id)->update(['available' => '{"0":0,"1":1}']);
@@ -271,6 +292,8 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_save_form_is_visible_only_with_valid_scenario_and_uses_csrf(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->get('/interbloqueos')->assertOk()->assertDontSeeText('Guardar una nueva simulación');
         $this->post('/interbloqueos', $this->data())->assertOk()
             ->assertSee('action="'.route('deadlocks.history.store').'"', false)
@@ -288,6 +311,8 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_database_unavailability_returns_clear_messages_without_query_details(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $originalResolver = DeadlockSimulation::getConnectionResolver();
         $resolver = \Mockery::mock(ConnectionResolverInterface::class);
         $resolver->shouldReceive('connection')->andThrow(new QueryException('sqlite', 'private-query', [], new \RuntimeException('private-database-error')));
@@ -312,6 +337,8 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_malformed_stored_timestamp_does_not_break_history_or_render_html(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $saved = $this->app->make(DeadlockSimulationStore::class)->save($this->data());
         DeadlockSimulation::query()->whereKey($saved->id)->update(['created_at' => '<script>private-invalid-date</script>']);
         $this->get('/interbloqueos/historial')->assertOk()
@@ -334,6 +361,8 @@ class DeadlockHistoryTest extends TestCase
     #[DataProvider('corruptScenarios')]
     public function test_corrupt_stored_scenarios_never_reach_analysis(string $field, mixed $value): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $saved = $this->app->make(DeadlockSimulationStore::class)->save($this->data());
         DeadlockSimulation::query()->whereKey($saved->id)->update([$field => $value]);
         $before = $saved->fresh()->getRawOriginal();
@@ -345,6 +374,8 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_missing_sqlite_file_does_not_expose_its_path_even_in_debug_mode(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $privatePath = '/tmp/sysmonitor-m4-missing-'.bin2hex(random_bytes(12)).'.sqlite';
         $this->assertFileDoesNotExist($privatePath);
         config(['app.debug' => true, 'database.connections.sqlite.database' => $privatePath]);
@@ -362,6 +393,8 @@ class DeadlockHistoryTest extends TestCase
 
     public function test_maximum_dimensions_and_values_round_trip_without_losing_order(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $matrix = array_fill(0, 20, array_fill(0, 20, ScenarioInput::MAX_VALUE));
         $data = ['n' => 20, 'm' => 20, 'allocation' => $matrix, 'max' => $matrix, 'available' => array_fill(0, 20, 0)];
         $this->postJson('/interbloqueos/historial', $data)->assertRedirect();

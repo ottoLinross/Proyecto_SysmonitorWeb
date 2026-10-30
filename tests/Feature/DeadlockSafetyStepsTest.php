@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -21,6 +22,8 @@ class DeadlockSafetyStepsTest extends TestCase
 
     public function test_safe_scenario_renders_all_actual_steps_and_preserves_existing_results(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         DB::shouldReceive('connection')->never();
         $response = $this->post('/interbloqueos', [
             'n' => 3, 'm' => 2, 'allocation' => '[[1,2],[2,0],[0,1]]',
@@ -40,6 +43,8 @@ class DeadlockSafetyStepsTest extends TestCase
 
     public function test_unsafe_scenario_renders_only_actual_partial_progress(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $response = $this->postJson('/interbloqueos', [
             'n' => 3, 'm' => 1, 'allocation' => [[1], [1], [0]], 'max' => [[1], [3], [3]], 'available' => [0],
         ])->assertOk()->assertSeeText('Estado inseguro')->assertSeeText('P2, P3')
@@ -54,6 +59,8 @@ class DeadlockSafetyStepsTest extends TestCase
 
     public function test_no_progress_shows_a_message_without_fabricated_steps(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $response = $this->post('/interbloqueos', [
             'n' => 2, 'm' => 1, 'allocation' => '[[1],[1]]', 'max' => '[[2],[2]]', 'available' => '[0]',
         ])->assertOk()->assertSeeText('Estado inseguro')->assertSeeText('P1, P2')
@@ -66,6 +73,8 @@ class DeadlockSafetyStepsTest extends TestCase
 
     public function test_initial_page_and_invalid_scenario_do_not_show_execution_steps(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->get('/interbloqueos')->assertOk()->assertDontSeeText('Ejecución paso a paso');
         $this->from('/interbloqueos')->post('/interbloqueos', [
             'n' => 1, 'm' => 1, 'allocation' => [[2]], 'max' => [[1]], 'available' => [0],

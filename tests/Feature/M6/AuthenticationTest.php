@@ -3,6 +3,7 @@
 namespace Tests\Feature\M6;
 
 use App\Http\Middleware\AuthenticateStorage;
+use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -251,7 +252,11 @@ class AuthenticationTest extends TestCase
             $this->assertSame($uri, $route->uri());
             $this->assertContains($method, $route->methods());
             $this->assertSame(
-                $name === 'storage.index' ? ['web', AuthenticateStorage::class] : ['web'],
+                array_merge(
+                    ['web', 'auth:web'],
+                    $name === 'storage.index' ? [AuthenticateStorage::class] : [],
+                    $method === 'POST' ? [EnsureUserIsAdmin::class] : [],
+                ),
                 $route->gatherMiddleware(),
             );
         }

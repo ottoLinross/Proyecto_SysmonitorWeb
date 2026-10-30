@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Deadlock\ResourceCycleResult;
 use App\Services\Deadlock\ScenarioInput;
 use App\Services\System\ProcessSignalService;
@@ -18,6 +19,8 @@ class DeadlockRecoveryTest extends TestCase
 
     public function test_form_requires_a_valid_scenario_and_has_csrf_and_strategy_options(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->get('/interbloqueos')->assertOk()->assertDontSeeText('Recuperación conceptual');
         $this->post('/interbloqueos', $this->data())->assertOk()
             ->assertSee('action="'.route('deadlocks.recovery').'"', false)
@@ -28,6 +31,8 @@ class DeadlockRecoveryTest extends TestCase
 
     public function test_manual_recovery_keeps_original_analysis_and_only_changes_a_copy(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         DB::shouldReceive('connection')->never();
         $this->app->bind(ProcessSignalService::class, fn () => throw new \RuntimeException('Recovery must not resolve real process controls'));
         $this->post('/interbloqueos/recuperacion', $this->data())->assertOk()
@@ -46,6 +51,8 @@ class DeadlockRecoveryTest extends TestCase
 
     public function test_automatic_selection_ignores_manual_selector_and_request_context_is_preserved(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['strategy'] = 'victim';
         $data['recovery_process'] = 2;
@@ -64,6 +71,8 @@ class DeadlockRecoveryTest extends TestCase
 
     public function test_conceptual_preemption_has_limitations_and_no_simulated_state(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['strategy'] = 'preemption';
         $this->post('/interbloqueos/recuperacion', $data)->assertOk()
@@ -75,6 +84,8 @@ class DeadlockRecoveryTest extends TestCase
 
     public function test_last_process_is_not_left_pending_or_shown_in_a_fabricated_sequence(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/interbloqueos/recuperacion', ['n' => 1, 'm' => 1, 'allocation' => [[1]], 'max' => [[2]], 'available' => [0], 'strategy' => 'terminate', 'recovery_process' => 1])
             ->assertOk()->assertSeeText('No quedan procesos activos; la secuencia temporal está vacía.')
             ->assertViewHas('recoveryResult', fn ($result) => $result->safety->unfinished === [] && $result->safety->safeSequence === []);
@@ -82,6 +93,8 @@ class DeadlockRecoveryTest extends TestCase
 
     public function test_strategy_can_leave_the_temporary_state_unsafe(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['allocation'] = [[0], [0]];
         $this->post('/interbloqueos/recuperacion', $data)->assertOk()
@@ -104,6 +117,8 @@ class DeadlockRecoveryTest extends TestCase
     #[DataProvider('invalidChoices')]
     public function test_invalid_strategy_or_process_is_rejected(mixed $strategy, mixed $process, string $field): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['strategy'] = $strategy;
         $data['recovery_process'] = $process;
@@ -112,6 +127,8 @@ class DeadlockRecoveryTest extends TestCase
 
     public function test_html_error_retains_original_results_and_escapes_input(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['strategy'] = '<script>alert(1)</script>';
         $this->post('/interbloqueos/recuperacion', $data)->assertUnprocessable()
@@ -122,6 +139,8 @@ class DeadlockRecoveryTest extends TestCase
 
     public function test_granted_request_and_original_safe_sequence_are_kept_separate_from_recovery(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['available'] = [1];
         $data['process'] = 1;
@@ -137,6 +156,8 @@ class DeadlockRecoveryTest extends TestCase
 
     public function test_raw_body_does_not_accept_a_process_with_surrounding_spaces(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['recovery_process'] = ' 1 ';
         $this->call('POST', '/interbloqueos/recuperacion', [], [], [], ['CONTENT_TYPE' => 'application/x-www-form-urlencoded', 'HTTP_ACCEPT' => 'application/json'], http_build_query($data))
@@ -145,6 +166,8 @@ class DeadlockRecoveryTest extends TestCase
 
     public function test_revalidates_original_scenario_request_context_and_payload_limits(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['allocation'] = [[3], [1]];
         $this->postJson('/interbloqueos/recuperacion', $data)->assertUnprocessable()->assertJsonValidationErrors('allocation.0.0');

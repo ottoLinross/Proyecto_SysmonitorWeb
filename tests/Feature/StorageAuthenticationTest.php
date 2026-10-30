@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\StorageController;
 use App\Http\Middleware\AuthenticateStorage;
+use App\Models\User;
 use App\Services\Storage\FileExplorerService;
 use App\Services\Storage\LsblkRunner;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,8 @@ class StorageAuthenticationTest extends TestCase
 
     public function test_anonymous_and_http_parameter_bypass_attempts_never_reach_sources(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(StorageController::class)->shouldNotReceive('index');
         $this->mock(LsblkRunner::class)->shouldNotReceive('run');
         $this->mock(FileExplorerService::class)->shouldNotReceive('browse');
@@ -33,6 +36,8 @@ class StorageAuthenticationTest extends TestCase
 
     public function test_wrong_user_password_and_malformed_authorization_are_denied(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(StorageController::class)->shouldNotReceive('index');
         foreach (['wrong:test-only-password', 'storage-test:wrong', 'storage-test:', ':test-only-password'] as $credentials) {
             $this->get('/almacenamiento', ['Authorization' => 'Basic '.base64_encode($credentials)])->assertUnauthorized();
@@ -44,6 +49,8 @@ class StorageAuthenticationTest extends TestCase
 
     public function test_valid_credentials_reach_controller(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(StorageController::class)->shouldReceive('index')->once()->andReturn(view('welcome'));
         $response = $this->withBasicAuth('storage-test', 'test-only-password')->get('/almacenamiento')->assertOk();
         $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
@@ -51,6 +58,8 @@ class StorageAuthenticationTest extends TestCase
 
     public function test_missing_empty_or_invalid_configuration_fails_closed(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(StorageController::class)->shouldNotReceive('index');
         foreach ([[null, null], ['', ''], ['storage-test', null], [null, password_hash('test-only-password', PASSWORD_BCRYPT, ['cost' => 4])], ['storage-test', 'invalid-hash'], [[], []]] as [$user, $hash]) {
             config(['storage_access.username' => $user, 'storage_access.password_hash' => $hash]);

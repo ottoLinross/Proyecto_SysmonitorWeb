@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ManagedProcess;
+use App\Models\User;
 use App\Services\System\ApplicationProcessUid;
 use App\Services\System\ManagedProcessProvenance;
 use App\Services\System\ProcessReniceRunner;
@@ -37,6 +38,8 @@ class ManagedProcessSecurityTest extends TestCase
     #[DataProvider('tamperedRecords')]
     public function test_tampered_persisted_records_cannot_receive_signals_or_renice(string $action, array $changes): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->legitimateRecord();
         ManagedProcess::query()->whereKey($process->id)->update($changes);
 
@@ -77,6 +80,8 @@ class ManagedProcessSecurityTest extends TestCase
     #[DataProvider('actions')]
     public function test_an_apparently_valid_manual_row_has_no_provenance_and_is_rejected(string $action): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->manualRecord();
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
             $mock->shouldNotReceive('read');
@@ -91,6 +96,8 @@ class ManagedProcessSecurityTest extends TestCase
     #[DataProvider('actions')]
     public function test_copying_a_legitimate_signature_to_a_different_row_does_not_authorize_it(string $action): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $original = $this->legitimateRecord();
         $copy = $this->manualRecord(43);
         $copy->forceFill(['registration_signature' => $original->getAttribute('registration_signature')])->save();
@@ -102,6 +109,8 @@ class ManagedProcessSecurityTest extends TestCase
     #[DataProvider('actions')]
     public function test_http_identity_fields_cannot_select_another_process(string $action): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->manualRecord();
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
             $mock->shouldNotReceive('read');
@@ -123,6 +132,8 @@ class ManagedProcessSecurityTest extends TestCase
 
     public function test_only_the_managed_section_contains_administrative_controls(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $valid = $this->legitimateRecord();
         $manual = $this->manualRecord(43);
         $this->partialMock(ProcessService::class, function (MockInterface $mock) {
@@ -157,6 +168,8 @@ class ManagedProcessSecurityTest extends TestCase
 
     public function test_malformed_persisted_text_keeps_the_page_usable_and_disables_actions(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $process = $this->legitimateRecord();
         ManagedProcess::query()->whereKey($process->id)->update(['launched_at' => "invalid\xFF"]);
         $this->partialMock(ProcessService::class, function (MockInterface $mock) {
@@ -173,6 +186,8 @@ class ManagedProcessSecurityTest extends TestCase
 
     public function test_legitimate_signal_transitions_preserve_registration_integrity(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->legitimateRecord();
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
             $mock->shouldReceive('read')->with(42)->twice()->andReturn([

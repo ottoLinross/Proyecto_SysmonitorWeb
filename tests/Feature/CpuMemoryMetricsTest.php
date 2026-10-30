@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\CpuMemoryController;
+use App\Models\User;
 use App\Services\System\CpuInfoService;
 use App\Services\System\CpuUsageService;
 use App\Services\System\MemoryService;
@@ -52,6 +53,8 @@ class CpuMemoryMetricsTest extends TestCase
 
     public function test_metrics_json_contract_types_and_service_usage(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(CpuInfoService::class, fn (MockInterface $mock) => $mock->shouldReceive('getInfo')->once()->andReturn(self::CPU_INFO));
         $this->mock(CpuUsageService::class, fn (MockInterface $mock) => $mock->shouldReceive('getUsagePercent')->once()->andReturn(42.5));
         $this->mock(MemoryService::class, fn (MockInterface $mock) => $mock->shouldReceive('getInfo')->once()->andReturn(self::MEMORY_INFO));
@@ -113,6 +116,8 @@ class CpuMemoryMetricsTest extends TestCase
 
     public function test_unavailable_readings_preserve_the_json_structure(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(CpuInfoService::class, fn (MockInterface $mock) => $mock->shouldReceive('getInfo')->once()->andReturn([
             'model' => null, 'logical_processors' => null, 'uptime_seconds' => null,
             'uptime_formatted' => null, 'load_average' => null,
@@ -134,6 +139,8 @@ class CpuMemoryMetricsTest extends TestCase
 
     public function test_zero_cpu_usage_is_a_number_not_null(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(CpuUsageService::class, fn (MockInterface $mock) => $mock->shouldReceive('getUsagePercent')->once()->andReturn(0.0));
 
         $response = $this->getJson('/cpu-memoria/metricas')->assertOk();
@@ -144,6 +151,8 @@ class CpuMemoryMetricsTest extends TestCase
     #[DataProvider('failingServices')]
     public function test_exceptions_return_a_controlled_error_even_with_debug_enabled(string $service, string $method): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         config(['app.debug' => true]);
         $this->mock($service, fn (MockInterface $mock) => $mock->shouldReceive($method)->once()->andThrow(new RuntimeException('/proc/internal private-marker stack trace')));
 
@@ -173,6 +182,8 @@ class CpuMemoryMetricsTest extends TestCase
 
     public function test_serialization_failure_returns_only_the_controlled_error(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         config(['app.debug' => true]);
         $info = self::CPU_INFO;
         $info['model'] = "invalid encoding \xFF /internal/private-marker";

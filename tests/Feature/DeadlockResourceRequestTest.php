@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Deadlock\ScenarioInput;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -16,6 +17,8 @@ class DeadlockResourceRequestTest extends TestCase
 
     public function test_validated_scenario_displays_a_request_form(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/interbloqueos', $this->data())->assertOk()
             ->assertSee('action="'.route('deadlocks.request').'"', false)
             ->assertSee('<option value="1"', false)->assertSee('<option value="2"', false)
@@ -24,6 +27,8 @@ class DeadlockResourceRequestTest extends TestCase
 
     public function test_granted_request_displays_simulation_and_keeps_original_analysis_and_steps(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         DB::shouldReceive('connection')->never();
         $this->post('/interbloqueos/solicitudes', $this->data())->assertOk()
             ->assertSeeText('Proceso: P2.')->assertSeeText('Request: [1]')
@@ -49,6 +54,8 @@ class DeadlockResourceRequestTest extends TestCase
     #[DataProvider('decisions')]
     public function test_non_granted_decisions_are_distinct_and_keep_the_original(string $process, string $request, string $decision, string $message): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['process'] = $process;
         $data['request'] = $request;
@@ -60,6 +67,8 @@ class DeadlockResourceRequestTest extends TestCase
 
     public function test_malformed_request_retains_original_scenario_and_reports_errors(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['request'] = '<script>alert(1)</script>';
         $this->post('/interbloqueos/solicitudes', $data)->assertUnprocessable()
@@ -72,6 +81,8 @@ class DeadlockResourceRequestTest extends TestCase
 
     public function test_nonexistent_process_and_wrong_dimensions_receive_json_validation_errors(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['process'] = 3;
         $this->postJson('/interbloqueos/solicitudes', $data)->assertUnprocessable()->assertJsonValidationErrors('process');
@@ -82,6 +93,8 @@ class DeadlockResourceRequestTest extends TestCase
 
     public function test_original_body_prevents_ambiguous_process_numbers(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['process'] = ' 1 ';
         $this->call('POST', '/interbloqueos/solicitudes', [], [], [], ['CONTENT_TYPE' => 'application/x-www-form-urlencoded', 'HTTP_ACCEPT' => 'application/json'], http_build_query($data))
@@ -90,6 +103,8 @@ class DeadlockResourceRequestTest extends TestCase
 
     public function test_structured_json_request_and_canonical_strings_are_supported(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->postJson('/interbloqueos/solicitudes', [
             'n' => 1, 'm' => 2, 'allocation' => [[0, 0]], 'max' => [[2, 3]], 'available' => [2, 3], 'process' => '1', 'request' => ['2', '3'],
         ])->assertOk()->assertViewHas('requestResult', fn ($value) => $value->decision === 'granted' && $value->request->vector === [2, 3] && $value->simulated->available === [0, 0]);
@@ -97,6 +112,8 @@ class DeadlockResourceRequestTest extends TestCase
 
     public function test_excessive_request_payload_is_rejected_without_flashing_input(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['request'] = str_repeat('x', ScenarioInput::MAX_PAYLOAD_BYTES + 1);
         $this->post('/interbloqueos/solicitudes', $data)->assertStatus(413)->assertSessionMissing('_old_input');
@@ -104,6 +121,8 @@ class DeadlockResourceRequestTest extends TestCase
 
     public function test_request_route_revalidates_the_submitted_scenario(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['allocation'] = '[[9],[1]]';
         $this->postJson('/interbloqueos/solicitudes', $data)->assertUnprocessable()->assertJsonValidationErrors('allocation.0.0');

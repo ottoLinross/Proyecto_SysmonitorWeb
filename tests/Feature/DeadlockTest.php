@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\DeadlockController;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -22,6 +23,8 @@ class DeadlockTest extends TestCase
 
     public function test_initial_page_renders_without_database_queries(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         DB::shouldReceive('connection')->never();
 
         $this->get('/interbloqueos')
@@ -40,6 +43,8 @@ class DeadlockTest extends TestCase
 
     public function test_module_rejects_missing_scenario(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/interbloqueos')->assertSessionHasErrors('n');
     }
 }

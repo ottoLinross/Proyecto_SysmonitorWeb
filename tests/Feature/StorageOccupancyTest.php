@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Storage\DfRunner;
 use App\Services\Storage\FileExplorerService;
 use App\Services\Storage\FindmntRunner;
@@ -33,6 +34,8 @@ class StorageOccupancyTest extends StorageTestCase
     #[DataProvider('percentages')]
     public function test_accessible_bar_uses_validated_df_percentage(string $input, int $expected): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(DfRunner::class)->shouldReceive('run')->once()->andReturn("Filesystem Size Used Avail Use% Mounted on\n/dev/example 10G 1G 9G {$input} /media/My disk\n");
         $response = $this->get('/almacenamiento')->assertOk()
             ->assertSeeText($expected.'%')->assertSee('role="progressbar"', false)
@@ -55,6 +58,8 @@ class StorageOccupancyTest extends StorageTestCase
     #[DataProvider('invalidPercentages')]
     public function test_invalid_percentage_is_rejected_without_inventing_a_bar(string $percentage): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(DfRunner::class)->shouldReceive('run')->once()->andReturn("Filesystem Size Used Avail Use% Mounted on\n/dev/example 10G 1G 9G {$percentage} /\n");
         $this->get('/almacenamiento')->assertOk()->assertSeeText('No se pudo consultar el uso del espacio.')
             ->assertDontSee('role="progressbar"', false)->assertSeeText('No se encontraron dispositivos.');
@@ -62,6 +67,8 @@ class StorageOccupancyTest extends StorageTestCase
 
     public function test_no_results_does_not_invent_percentage(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(DfRunner::class)->shouldReceive('run')->once()->andReturn("Filesystem Size Used Avail Use% Mounted on\n");
         $this->get('/almacenamiento')->assertOk()->assertSeeText('No se encontraron sistemas de archivos montados.')
             ->assertDontSee('role="progressbar"', false);

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\System\ProcessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -15,6 +16,8 @@ class ProcessTest extends TestCase
 
     public function test_processes_page_displays_the_process_table(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $process = $this->exampleProcess();
         $this->partialMock(ProcessService::class, function (MockInterface $mock) use ($process) {
             $mock->shouldReceive('getProcesses')->once()->andReturn([$process]);
@@ -43,6 +46,8 @@ class ProcessTest extends TestCase
 
     public function test_processes_page_handles_an_empty_list(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->partialMock(ProcessService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getProcesses')->once()->andReturn([]);
         });
@@ -58,6 +63,8 @@ class ProcessTest extends TestCase
 
     public function test_processes_page_escapes_system_values(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $process = array_replace($this->exampleProcess(), [
             'user' => '<b>usuario</b>',
             'state' => '<i>S</i>',
@@ -80,6 +87,8 @@ class ProcessTest extends TestCase
     #[DataProvider('searchQueries')]
     public function test_it_searches_every_visible_column(string $query): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = $this->sampleProcesses();
         $this->mockProcesses($processes);
 
@@ -108,6 +117,8 @@ class ProcessTest extends TestCase
 
     public function test_it_distinguishes_no_matches_from_an_empty_service(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mockProcesses($this->sampleProcesses());
 
         $response = $this->get('/procesos?q=sin-coincidencias');
@@ -120,6 +131,8 @@ class ProcessTest extends TestCase
 
     public function test_an_empty_service_with_a_search_still_shows_the_empty_service_message(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mockProcesses([]);
 
         $response = $this->get('/procesos?q=example');
@@ -132,6 +145,8 @@ class ProcessTest extends TestCase
     #[DataProvider('sortOptions')]
     public function test_it_sorts_every_column_in_both_directions(string $sort, string $direction, array $expectedPids): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = $this->sampleProcesses();
         $this->mockProcesses($processes);
 
@@ -170,6 +185,8 @@ class ProcessTest extends TestCase
 
     public function test_it_defaults_to_pid_ascending(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = $this->sampleProcesses();
         $this->mockProcesses($processes);
 
@@ -184,6 +201,8 @@ class ProcessTest extends TestCase
     #[DataProvider('invalidSorts')]
     public function test_invalid_sort_uses_the_safe_default(mixed $sort): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = $this->sampleProcesses();
         $this->mockProcesses($processes);
 
@@ -207,6 +226,8 @@ class ProcessTest extends TestCase
     #[DataProvider('invalidDirections')]
     public function test_invalid_direction_defaults_to_ascending(mixed $direction): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = $this->sampleProcesses();
         $this->mockProcesses($processes);
 
@@ -226,6 +247,8 @@ class ProcessTest extends TestCase
     #[DataProvider('emptyQueries')]
     public function test_empty_or_non_text_queries_show_all_processes(mixed $query): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = $this->sampleProcesses();
         $this->mockProcesses($processes);
 
@@ -243,6 +266,8 @@ class ProcessTest extends TestCase
 
     public function test_sort_links_preserve_search_and_toggle_direction(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mockProcesses($this->sampleProcesses());
         $query = 'EXAMPLE --label "two  words"';
 
@@ -266,6 +291,8 @@ class ProcessTest extends TestCase
 
     public function test_descending_column_link_toggles_back_to_ascending(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mockProcesses($this->sampleProcesses());
 
         $response = $this->get('/procesos?q=example&sort=pid&direction=desc');
@@ -277,6 +304,8 @@ class ProcessTest extends TestCase
 
     public function test_search_parameters_are_escaped_in_the_form_and_sort_links(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mockProcesses($this->sampleProcesses());
         $query = '"><script>alert("test")</script>&';
 
@@ -291,6 +320,8 @@ class ProcessTest extends TestCase
 
     public function test_state_summary_counts_all_five_states_and_their_modifiers(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = $this->processesForSummary();
         $this->mockProcesses($processes);
 
@@ -312,6 +343,8 @@ class ProcessTest extends TestCase
 
     public function test_state_summary_shows_zero_counts_when_the_service_is_empty(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mockProcesses([]);
 
         $response = $this->get('/procesos');
@@ -324,6 +357,8 @@ class ProcessTest extends TestCase
     #[DataProvider('ignoredStates')]
     public function test_unknown_empty_and_null_states_do_not_break_the_page(?string $state): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = [
             array_replace($this->exampleProcess(), ['pid' => 10, 'state' => $state]),
             array_replace($this->exampleProcess(), ['pid' => 11, 'state' => 'R']),
@@ -355,6 +390,8 @@ class ProcessTest extends TestCase
     #[DataProvider('summaryTableOptions')]
     public function test_search_and_sort_do_not_change_the_global_summary(array $parameters, array $expectedPids): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = $this->processesForSummary();
         $this->mockProcesses($processes);
 
@@ -408,6 +445,8 @@ class ProcessTest extends TestCase
     #[DataProvider('treeTableOptions')]
     public function test_the_global_tree_is_rendered_independently_of_table_parameters(array $parameters, array $expectedTablePids): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = $this->treeProcesses();
         $this->mockProcesses($processes);
         $byPid = array_column($processes, null, 'pid');
@@ -456,6 +495,8 @@ class ProcessTest extends TestCase
 
     public function test_the_empty_tree_displays_a_friendly_message(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mockProcesses([]);
 
         $response = $this->get('/procesos');
@@ -469,6 +510,8 @@ class ProcessTest extends TestCase
 
     public function test_the_tree_escapes_commands_users_and_states(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $process = array_replace($this->exampleProcess(), [
             'ppid' => 0,
             'command' => '<script>alert("tree")</script> --label "two words"',
@@ -490,6 +533,8 @@ class ProcessTest extends TestCase
     #[DataProvider('cyclicTreeParents')]
     public function test_anomalous_relations_render_each_process_once(array $parents): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = [];
         foreach ($parents as $pid => $ppid) {
             $processes[] = array_replace($this->exampleProcess(), ['pid' => $pid, 'ppid' => $ppid]);
@@ -511,6 +556,8 @@ class ProcessTest extends TestCase
 
     public function test_a_deep_tree_renders_without_recursive_blade_calls(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = [];
         for ($pid = 1; $pid <= 400; $pid++) {
             $processes[] = array_replace($this->exampleProcess(), ['pid' => $pid, 'ppid' => $pid - 1]);

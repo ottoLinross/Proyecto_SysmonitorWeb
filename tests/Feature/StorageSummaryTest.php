@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Storage\DfRunner;
 use App\Services\Storage\FileExplorerService;
 use App\Services\Storage\FindmntRunner;
@@ -49,6 +50,8 @@ class StorageSummaryTest extends StorageTestCase
 
     public function test_http_payloads_cannot_change_commands_or_sources(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $query = http_build_query([
             'path' => 'sub', 'command' => ['sh', '-c', 'touch /tmp/forbidden'],
             'args' => '; id | cat', 'source' => '/etc/shadow', 'action' => 'download',
@@ -62,6 +65,8 @@ class StorageSummaryTest extends StorageTestCase
 
     public function test_summary_is_consistent_deduplicated_and_does_not_sum_capacities(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $response = $this->get('/almacenamiento?path=sub&action=delete');
         $response->assertOk()->assertViewHas('summary', function (array $summary): bool {
             $this->assertSame(2, $summary['disks']);
@@ -80,6 +85,8 @@ class StorageSummaryTest extends StorageTestCase
 
     public function test_zero_disks_and_no_sessions_are_available_empty_results(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(LsblkRunner::class)->shouldReceive('run')->once()->andReturn('{"blockdevices":[]}');
         $this->get('/almacenamiento?path=sub')->assertOk()->assertViewHas('summary', function (array $summary): bool {
             $this->assertSame(0, $summary['disks']);
@@ -107,6 +114,8 @@ class StorageSummaryTest extends StorageTestCase
     #[DataProvider('failingSources')]
     public function test_failures_are_independent_and_hide_internal_details(string $runner, string $method, string $source, ?string $counter): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $mock = $this->mock($runner);
         $mock->shouldReceive($method)->once()->andThrow(new \LogicException('SECRET /private/internal.php Stack trace #0'));
         if ($runner === SystemUsersReader::class) {
@@ -130,6 +139,8 @@ class StorageSummaryTest extends StorageTestCase
 
     public function test_missing_command_is_unavailable_and_invalid_output_is_a_read_error(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $process = new Process(['/missing/storage-command']);
         $process->run();
         $this->mock(LsblkRunner::class)->shouldReceive('run')->once()->andThrow(new ProcessFailedException($process));

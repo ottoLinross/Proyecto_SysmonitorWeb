@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Storage\DfRunner;
 use App\Services\Storage\FileExplorerService;
 use App\Services\Storage\FindmntRunner;
@@ -86,6 +87,8 @@ class StorageUsersTest extends StorageTestCase
     #[DataProvider('invalidDefinitions')]
     public function test_uid_min_fallback(?string $definitions): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $reader = $this->mock(SystemUsersReader::class);
         $expectation = $reader->shouldReceive('loginDefs');
         if ($definitions === null) {
@@ -103,6 +106,8 @@ class StorageUsersTest extends StorageTestCase
 
     public function test_unreadable_passwd_and_empty_results_preserve_sections(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $reader = $this->mock(SystemUsersReader::class);
         $reader->shouldReceive('loginDefs')->andReturn('UID_MIN 1000');
         $reader->shouldReceive('passwd')->andThrow(new \RuntimeException('private'));
@@ -113,6 +118,8 @@ class StorageUsersTest extends StorageTestCase
 
     public function test_empty_passwd(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $reader = $this->mock(SystemUsersReader::class);
         $reader->shouldReceive('loginDefs')->andReturn('UID_MIN 1000');
         $reader->shouldReceive('passwd')->andReturn('');
@@ -121,6 +128,8 @@ class StorageUsersTest extends StorageTestCase
 
     public function test_table_escapes_all_text_fields_and_is_read_only(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $reader = $this->mock(SystemUsersReader::class);
         $reader->shouldReceive('loginDefs')->andReturn('UID_MIN 1000');
         $reader->shouldReceive('passwd')->andReturn('<script>user</script>:x:1000:42::<home>:<shell>');

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ManagedProcess;
+use App\Models\User;
 use App\Services\System\ProcessService;
 use App\Services\System\TestProcessIdentityReader;
 use App\Services\System\TestProcessLauncher;
@@ -41,6 +42,8 @@ class TestProcessTest extends TestCase
     #[DataProvider('invalidPids')]
     public function test_invalid_launcher_pids_are_not_registered(string $output): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->mock(TestProcessLauncher::class, function (MockInterface $mock) use ($output) {
             $mock->shouldReceive('launch')->once()->andReturn($output);
         });
@@ -67,6 +70,8 @@ class TestProcessTest extends TestCase
     #[DataProvider('invalidStoredIdentities')]
     public function test_invalid_identity_is_not_registered(array $identity): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->mockLaunch('42', $identity);
 
         $response = $this->post('/procesos/prueba');
@@ -90,6 +95,8 @@ class TestProcessTest extends TestCase
 
     public function test_a_disappeared_process_is_not_registered(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->mock(TestProcessLauncher::class, function (MockInterface $mock) {
             $mock->shouldReceive('launch')->once()->andReturn('42');
         });
@@ -106,6 +113,8 @@ class TestProcessTest extends TestCase
 
     public function test_launcher_errors_are_presented_as_a_generic_message(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->mock(TestProcessLauncher::class, function (MockInterface $mock) {
             $mock->shouldReceive('launch')->once()->andThrow(new RuntimeException('internal launcher detail'));
         });
@@ -121,6 +130,8 @@ class TestProcessTest extends TestCase
 
     public function test_database_failure_rolls_back_the_registration(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->mockLaunch('42', $this->identity());
         ManagedProcess::created(function () {
             throw new RuntimeException('internal database detail');
@@ -148,6 +159,8 @@ class TestProcessTest extends TestCase
 
     public function test_post_redirects_and_shows_success_while_ignoring_user_command_parameters(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->mockLaunch('42', $this->identity());
         $this->mockGeneralProcesses();
 
@@ -166,6 +179,8 @@ class TestProcessTest extends TestCase
 
     public function test_the_form_contains_only_csrf_and_the_fixed_launch_button(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mockGeneralProcesses();
 
         $response = $this->get('/procesos');
@@ -197,6 +212,8 @@ class TestProcessTest extends TestCase
 
     public function test_registered_processes_and_messages_are_displayed_escaped(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mockGeneralProcesses();
         $process = ManagedProcess::create([
             ...$this->identity(),
@@ -230,6 +247,8 @@ class TestProcessTest extends TestCase
 
     public function test_an_unavailable_registry_prevents_launch_and_keeps_the_page_usable(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         // Exclusivamente SQLite en memoria, nunca la base local.
         $this->assertSame('sqlite', config('database.default'));
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));

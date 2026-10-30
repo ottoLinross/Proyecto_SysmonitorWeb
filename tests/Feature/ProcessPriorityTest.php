@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ManagedProcess;
+use App\Models\User;
 use App\Services\System\ApplicationProcessUid;
 use App\Services\System\ManagedProcessProvenance;
 use App\Services\System\ProcessPriorityService;
@@ -30,6 +31,8 @@ class ProcessPriorityTest extends TestCase
     #[DataProvider('validValues')]
     public function test_valid_post_uses_registered_identity_and_verifies_nice(string $nice, int $exitCode): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record('stopped');
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) use ($nice, $exitCode) {
             $mock->shouldReceive('read')->with(42)->once()->andReturn($this->identity());
@@ -62,6 +65,8 @@ class ProcessPriorityTest extends TestCase
     #[DataProvider('invalidValues')]
     public function test_invalid_input_never_executes_renice(mixed $nice): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record();
         $this->mock(ProcessReniceRunner::class, function (MockInterface $mock) {
             $mock->shouldNotReceive('run');
@@ -84,6 +89,8 @@ class ProcessPriorityTest extends TestCase
     #[DataProvider('identityErrors')]
     public function test_missing_or_mismatched_process_never_executes(bool $missing): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record();
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) use ($missing) {
             if ($missing) {
@@ -111,6 +118,8 @@ class ProcessPriorityTest extends TestCase
 
     public function test_get_and_unregistered_url_ids_cannot_change_priority(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record();
         $this->mock(ProcessReniceRunner::class, function (MockInterface $mock) {
             $mock->shouldNotReceive('run');
@@ -124,6 +133,8 @@ class ProcessPriorityTest extends TestCase
 
     public function test_terminal_records_are_revalidated_and_rejected_by_the_backend(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record('killed');
         $this->mock(TestProcessIdentityReader::class, function (MockInterface $mock) {
             $mock->shouldReceive('read')->once()->andReturn($this->identity());
@@ -139,6 +150,8 @@ class ProcessPriorityTest extends TestCase
 
     public function test_forms_use_csrf_post_internal_ids_and_only_the_nice_field(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $active = $this->record();
         $terminal = $this->record('terminated', 43);
         $this->mockGeneralProcesses();
@@ -175,6 +188,8 @@ class ProcessPriorityTest extends TestCase
 
     public function test_internal_errors_are_displayed_as_a_generic_message(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $process = $this->record();
         $this->mock(ProcessPriorityService::class, function (MockInterface $mock) {
             $mock->shouldReceive('change')->once()->andThrow(new RuntimeException('internal stderr'));
