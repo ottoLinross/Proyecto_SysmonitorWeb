@@ -202,7 +202,13 @@ class ModuleLayoutIntegrationTest extends TestCase
         }
         $this->assertContains(AuthenticateStorage::class, Route::getRoutes()->getByName('storage.index')->gatherMiddleware());
         $this->assertContains(EnsureUserIsAdmin::class, Route::getRoutes()->getByName('processes.test.store')->gatherMiddleware());
-        $this->assertCount(28, Route::getRoutes()->getRoutes());
+        $this->assertCount(36, Route::getRoutes()->getRoutes());
+        foreach (['users.index', 'users.create', 'users.store', 'users.edit', 'users.update', 'users.role', 'users.password.edit', 'users.password.update'] as $name) {
+            $userRoute = Route::getRoutes()->getByName($name);
+            $this->assertNotNull($userRoute, $name);
+            $this->assertContains('auth:web', $userRoute->gatherMiddleware(), $name);
+            $this->assertContains(EnsureUserIsAdmin::class, $userRoute->gatherMiddleware(), $name);
+        }
     }
 
     private function mockProcessReads(int $calls = 2): void

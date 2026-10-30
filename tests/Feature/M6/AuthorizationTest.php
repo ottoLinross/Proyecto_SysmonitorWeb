@@ -220,7 +220,7 @@ class AuthorizationTest extends TestCase
 
     public function test_all_registered_routes_have_the_expected_security_boundary(): void
     {
-        $this->assertCount(28, Route::getRoutes());
+        $this->assertCount(36, Route::getRoutes());
         foreach (Route::getRoutes() as $route) {
             $middleware = $route->gatherMiddleware();
             if (in_array($route->uri(), ['login', 'logout', 'up'], true)) {
@@ -230,11 +230,35 @@ class AuthorizationTest extends TestCase
             }
             $this->assertContains('auth:web', $middleware, $route->uri());
             $this->assertContains('web', $middleware, $route->uri());
+            if (str_starts_with((string) $route->getName(), 'users.')) {
+                $this->assertContains(EnsureUserIsAdmin::class, $middleware, $route->uri());
+
+                continue;
+            }
             if (array_intersect(['POST', 'PUT', 'PATCH', 'DELETE'], $route->methods())) {
                 $this->assertContains(EnsureUserIsAdmin::class, $middleware, $route->uri());
             } else {
                 $this->assertNotContains(EnsureUserIsAdmin::class, $middleware, $route->uri());
             }
+        }
+
+        $userRoutes = [
+            'users.index' => ['GET', 'usuarios'],
+            'users.create' => ['GET', 'usuarios/crear'],
+            'users.store' => ['POST', 'usuarios'],
+            'users.edit' => ['GET', 'usuarios/{user}/editar'],
+            'users.update' => ['PATCH', 'usuarios/{user}'],
+            'users.role' => ['PATCH', 'usuarios/{user}/rol'],
+            'users.password.edit' => ['GET', 'usuarios/{user}/contrasena'],
+            'users.password.update' => ['PUT', 'usuarios/{user}/contrasena'],
+        ];
+        foreach ($userRoutes as $name => [$method, $uri]) {
+            $route = Route::getRoutes()->getByName($name);
+            $this->assertNotNull($route, $name);
+            $this->assertSame($uri, $route->uri());
+            $this->assertContains($method, $route->methods());
+            $this->assertContains('auth:web', $route->gatherMiddleware());
+            $this->assertContains(EnsureUserIsAdmin::class, $route->gatherMiddleware());
         }
     }
 

@@ -30,5 +30,12 @@
                 <span class="sm-nav-mark" aria-hidden="true">M5</span><span>Almacenamiento</span>
             </a>
         </li>
+        @if (auth('web')->user()?->isAdmin())
+            <li>
+                <a class="sm-nav-link" href="{{ route('users.index') }}" @if (request()->routeIs('users.*')) aria-current="page" @endif>
+                    <span class="sm-nav-mark" aria-hidden="true">U</span><span>Usuarios</span>
+                </a>
+            </li>
+        @endif
     </ul>
 </nav>

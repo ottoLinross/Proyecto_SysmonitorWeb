@@ -6,6 +6,7 @@ use App\Http\Controllers\DeadlockController;
 use App\Http\Controllers\DeadlockHistoryController;
 use App\Http\Controllers\DeadlockRecoveryController;
 use App\Http\Controllers\M6\DashboardController;
+use App\Http\Controllers\M6\UserManagementController;
 use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\SchedulingHistoryController;
@@ -46,4 +47,15 @@ Route::middleware('auth:web')->group(function () {
         ->whereNumber('managedProcess')->middleware(EnsureUserIsAdmin::class)->name('processes.test.signal');
     Route::post('/procesos/prueba/{managedProcess}/priority', [TestProcessController::class, 'priority'])
         ->whereNumber('managedProcess')->middleware(EnsureUserIsAdmin::class)->name('processes.test.priority');
+
+    Route::middleware(EnsureUserIsAdmin::class)->prefix('usuarios')->name('users.')->group(function () {
+        Route::get('/', [UserManagementController::class, 'index'])->name('index');
+        Route::get('/crear', [UserManagementController::class, 'create'])->name('create');
+        Route::post('/', [UserManagementController::class, 'store'])->name('store');
+        Route::get('/{user}/editar', [UserManagementController::class, 'edit'])->whereNumber('user')->name('edit');
+        Route::patch('/{user}', [UserManagementController::class, 'update'])->whereNumber('user')->name('update');
+        Route::patch('/{user}/rol', [UserManagementController::class, 'updateRole'])->whereNumber('user')->name('role');
+        Route::get('/{user}/contrasena', [UserManagementController::class, 'editPassword'])->whereNumber('user')->name('password.edit');
+        Route::put('/{user}/contrasena', [UserManagementController::class, 'updatePassword'])->whereNumber('user')->name('password.update');
+    });
 });

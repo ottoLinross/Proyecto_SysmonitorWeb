@@ -245,6 +245,14 @@ class AuthenticationTest extends TestCase
             'processes.test.store' => ['POST', 'procesos/prueba'],
             'processes.test.signal' => ['POST', 'procesos/prueba/{managedProcess}/signal'],
             'processes.test.priority' => ['POST', 'procesos/prueba/{managedProcess}/priority'],
+            'users.index' => ['GET', 'usuarios'],
+            'users.create' => ['GET', 'usuarios/crear'],
+            'users.store' => ['POST', 'usuarios'],
+            'users.edit' => ['GET', 'usuarios/{user}/editar'],
+            'users.update' => ['PATCH', 'usuarios/{user}'],
+            'users.role' => ['PATCH', 'usuarios/{user}/rol'],
+            'users.password.edit' => ['GET', 'usuarios/{user}/contrasena'],
+            'users.password.update' => ['PUT', 'usuarios/{user}/contrasena'],
         ];
         foreach ($expected as $name => [$method, $uri]) {
             $route = Route::getRoutes()->getByName($name);
@@ -255,7 +263,9 @@ class AuthenticationTest extends TestCase
                 array_merge(
                     ['web', 'auth:web'],
                     $name === 'storage.index' ? [AuthenticateStorage::class] : [],
-                    $method === 'POST' ? [EnsureUserIsAdmin::class] : [],
+                    str_starts_with($name, 'users.') || in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)
+                        ? [EnsureUserIsAdmin::class]
+                        : [],
                 ),
                 $route->gatherMiddleware(),
             );
@@ -263,7 +273,7 @@ class AuthenticationTest extends TestCase
         foreach (['/', 'up', 'storage/{path}'] as $uri) {
             $this->assertContains($uri, array_map(fn ($route) => $route->uri(), Route::getRoutes()->getRoutes()));
         }
-        $this->assertCount(28, Route::getRoutes());
+        $this->assertCount(36, Route::getRoutes());
     }
 
     public function test_login_and_logout_require_csrf_outside_test_bypass(): void

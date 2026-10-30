@@ -167,7 +167,13 @@ class DashboardTest extends TestCase
         $this->assertContains('auth:web', $root->gatherMiddleware());
         $this->assertContains(AuthenticateStorage::class, $storage->gatherMiddleware());
         $this->assertContains(EnsureUserIsAdmin::class, $adminAction->gatherMiddleware());
-        $this->assertCount(28, Route::getRoutes()->getRoutes());
+        $this->assertCount(36, Route::getRoutes()->getRoutes());
+        foreach (['users.index', 'users.create', 'users.store', 'users.edit', 'users.update', 'users.role', 'users.password.edit', 'users.password.update'] as $name) {
+            $userRoute = Route::getRoutes()->getByName($name);
+            $this->assertNotNull($userRoute, $name);
+            $this->assertContains('auth:web', $userRoute->gatherMiddleware(), $name);
+            $this->assertContains(EnsureUserIsAdmin::class, $userRoute->gatherMiddleware(), $name);
+        }
     }
 
     private function mockReadSources(
