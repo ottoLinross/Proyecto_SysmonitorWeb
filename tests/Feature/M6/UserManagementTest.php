@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\M6\AuditLogger;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -121,6 +122,62 @@ class UserManagementTest extends TestCase
             ->assertRedirect(route('users.edit', $lastAdmin))->assertSessionHas('error', 'Debe permanecer al menos un Administrador activo.');
         $this->assertSame(User::ROLE_ADMIN, $lastAdmin->fresh()->role);
         $this->assertDatabaseHas('audit_logs', ['action' => 'user.role', 'target_id' => (string) $lastAdmin->id, 'status' => AuditLog::STATUS_FAILURE]);
+    }
+
+    public function test_administrator_can_demote_self_and_finish_the_same_audit_record(): void
+    {
+        $adminA = $this->user(User::ROLE_ADMIN, 'Administrator A');
+        $adminB = $this->user(User::ROLE_ADMIN, 'Administrator B');
+
+        $this->post('/login', ['email' => $adminA->email, 'password' => $this->password])
+            ->assertRedirect(route('processes.index'));
+
+        $this->from(route('users.edit', $adminA))
+            ->patch(route('users.role', $adminA), ['role' => User::ROLE_OBSERVER])
+            ->assertRedirect(route('users.edit', $adminA))
+            ->assertSessionHas('status', 'Rol actualizado.');
+
+        $this->assertSame(User::ROLE_OBSERVER, $adminA->fresh()->role);
+        $this->assertSame(User::ROLE_ADMIN, $adminB->fresh()->role);
+
+        $audit = AuditLog::query()
+            ->where('action', 'user.role')
+            ->where('user_id', $adminA->id)
+            ->where('target_id', (string) $adminA->id)
+            ->sole();
+        $this->assertSame(AuditLog::STATUS_SUCCESS, $audit->status);
+        $this->assertSame('role_changed', $audit->result);
+        $this->assertDatabaseMissing('audit_logs', [
+            'action' => 'user.role',
+            'user_id' => $adminA->id,
+            'target_id' => (string) $adminA->id,
+            'status' => AuditLog::STATUS_PENDING,
+        ]);
+
+        auth('web')->logout();
+        $this->post('/login', ['email' => $adminA->email, 'password' => $this->password])
+            ->assertRedirect(route('processes.index'));
+        $this->post(route('users.store'), $this->validPayload(['email' => 'after-demotion@example.test']))
+            ->assertForbidden();
+        $this->assertDatabaseMissing('users', ['email' => 'after-demotion@example.test']);
+    }
+
+    public function test_observer_without_the_operation_continuation_cannot_finish_an_admin_audit(): void
+    {
+        $admin = $this->user(User::ROLE_ADMIN, 'Audit Owner');
+        $observer = $this->user(User::ROLE_OBSERVER, 'Unrelated Observer');
+        $this->actingAs($admin, 'web');
+
+        $logger = app(AuditLogger::class);
+        $pending = $logger->begin('user.role', 'user', $admin->id);
+
+        $this->actingAs($observer, 'web');
+        try {
+            $logger->finish($pending, AuditLog::STATUS_SUCCESS, 'role_changed');
+            $this->fail('An unrelated Observer finalized an Administrator audit.');
+        } catch (AuthorizationException) {
+            $this->assertSame(AuditLog::STATUS_PENDING, $pending->fresh()->status);
+        }
     }
 
     public function test_password_change_is_confirmed_hashed_and_never_exposed_or_audited(): void

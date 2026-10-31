@@ -14,6 +14,14 @@ class AuditLogger
 {
     private const METADATA_KEYS = ['process_id', 'signal', 'nice', 'algorithm', 'mode', 'process_count', 'quantum'];
 
+    /** @var \WeakMap<AuditLog, string> */
+    private \WeakMap $selfRoleChangeContinuations;
+
+    public function __construct()
+    {
+        $this->selfRoleChangeContinuations = new \WeakMap;
+    }
+
     public function begin(
         string $action,
         ?string $targetType = null,
@@ -48,6 +56,11 @@ class AuditLogger
         $entry->ip_address = $ipAddress;
         $entry->save();
 
+        if ($action === 'user.role' && $targetType === 'user'
+            && (string) $targetId === (string) $actor->getKey()) {
+            $this->selfRoleChangeContinuations[$entry] = (string) $actor->getKey();
+        }
+
         return $entry;
     }
 
@@ -71,9 +84,13 @@ class AuditLogger
             throw new InvalidArgumentException('Invalid process identifier.');
         }
 
-        $actor = $this->authorizedActor();
         $stored = AuditLog::query()->find($audit->getKey());
-        if (! $stored || (string) $stored->user_id !== (string) $actor->getKey()) {
+        if (! $stored) {
+            throw new AuthorizationException('The audit record is not available to this administrator.');
+        }
+
+        $actor = $this->authorizedActor($audit, $stored);
+        if ((string) $stored->user_id !== (string) $actor->getKey()) {
             throw new AuthorizationException('The audit record is not available to this administrator.');
         }
 
@@ -92,6 +109,10 @@ class AuditLogger
 
         if ($updated !== 1) {
             throw new LogicException('Audit record is no longer pending or could not be finalized.');
+        }
+
+        if (isset($this->selfRoleChangeContinuations[$audit])) {
+            unset($this->selfRoleChangeContinuations[$audit]);
         }
 
         return $stored->refresh();
@@ -117,7 +138,7 @@ class AuditLogger
         return $safe;
     }
 
-    private function authorizedActor(): User
+    private function authorizedActor(?AuditLog $audit = null, ?AuditLog $storedAudit = null): User
     {
         $authenticated = Auth::guard('web')->user();
         if (! $authenticated instanceof User || ! $authenticated->exists) {
@@ -125,11 +146,37 @@ class AuditLogger
         }
 
         $actor = User::query()->find($authenticated->getKey());
-        if (! $actor instanceof User || ! $actor->isAdmin()) {
+        if (! $actor instanceof User) {
             throw new AuthorizationException('A persisted administrator is required to write audit records.');
         }
 
-        return $actor;
+        if ($actor->isAdmin()) {
+            return $actor;
+        }
+
+        if ($audit !== null && $storedAudit !== null && $this->canContinueSelfRoleChange($audit, $storedAudit, $actor)) {
+            return $actor;
+        }
+
+        throw new AuthorizationException('A persisted administrator is required to write audit records.');
+    }
+
+    private function canContinueSelfRoleChange(AuditLog $audit, AuditLog $storedAudit, User $actor): bool
+    {
+        if (! isset($this->selfRoleChangeContinuations[$audit]) || ! $actor->isObserver()) {
+            return false;
+        }
+
+        $authorizedActorId = $this->selfRoleChangeContinuations[$audit];
+
+        return $authorizedActorId === (string) $actor->getKey()
+            && (string) $audit->getKey() === (string) $storedAudit->getKey()
+            && (string) $storedAudit->user_id === (string) $actor->getKey()
+            && $storedAudit->action === 'user.role'
+            && $storedAudit->target_type === 'user'
+            && (string) $storedAudit->target_id === (string) $actor->getKey()
+            && $storedAudit->status === AuditLog::STATUS_PENDING;
+
     }
 
     private function validateIdentifier(?string $value, string $label, bool $nullable, int $maximum): void
