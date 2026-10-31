@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\SchedulingRun;
+use App\Models\User;
 use App\Services\Scheduling\SchedulingComparison;
 use App\Services\Scheduling\SchedulingSimulation;
 use Illuminate\Database\QueryException;
@@ -30,6 +31,8 @@ class SchedulingHistoryTest extends TestCase
     #[DataProvider('algorithms')]
     public function test_each_algorithm_is_saved_with_unchanged_results_and_recovers_from_json(string $algorithm): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $response = $this->post('/planificacion/simular', $this->payload($algorithm))->assertOk();
         $run = SchedulingRun::query()->sole();
         $result = $response->viewData('simulation');
@@ -62,6 +65,8 @@ class SchedulingHistoryTest extends TestCase
 
     public function test_comparison_persists_all_five_complete_results_and_detail_gantts_without_recalculation(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $response = $this->post('/planificacion/comparar', $this->payload())->assertOk();
         $run = SchedulingRun::query()->sole();
         $this->assertSame('comparison', $run->mode);
@@ -95,6 +100,8 @@ class SchedulingHistoryTest extends TestCase
 
     public function test_history_is_empty_then_paginated_with_stable_newest_first_order(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->get('/planificacion/historial')->assertOk()->assertSeeText('No hay simulaciones guardadas.');
         $this->freezeTime();
         $saved = [];
@@ -111,6 +118,8 @@ class SchedulingHistoryTest extends TestCase
 
     public function test_snapshot_survives_reopening_an_isolated_sqlite_file(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $path = tempnam(sys_get_temp_dir(), 'scheduling-history-');
         $this->assertNotFalse($path);
         try {
@@ -136,6 +145,8 @@ class SchedulingHistoryTest extends TestCase
 
     public function test_nonexistent_and_nonnumeric_identifiers_return_404_and_detail_cannot_be_updated(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->get('/planificacion/historial/999')->assertNotFound();
         $this->get('/planificacion/historial/abc')->assertNotFound();
         $this->post('/planificacion/simular', $this->payload())->assertOk();
@@ -148,6 +159,8 @@ class SchedulingHistoryTest extends TestCase
 
     public function test_untrusted_results_are_ignored_and_invalid_input_is_not_saved(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $payload = $this->payload();
         $payload['results'] = [['metrics' => ['average_waiting_time' => -999]]];
         $payload['mode'] = 'forged';
@@ -162,6 +175,8 @@ class SchedulingHistoryTest extends TestCase
 
     public function test_failed_save_rolls_back_and_preserves_results_without_claiming_success(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         SchedulingRun::created(function (): void {
             throw new QueryException('sqlite', 'insert scheduling_runs', [], new RuntimeException('private-database-marker'));
         });
@@ -178,6 +193,8 @@ class SchedulingHistoryTest extends TestCase
 
     public function test_history_database_failure_is_generic_and_migration_can_be_rolled_back(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->artisan('migrate:rollback', [
             '--database' => 'sqlite', '--path' => 'database/migrations/2026_10_15_000000_create_scheduling_runs_table.php',
         ])->assertExitCode(0);
@@ -189,6 +206,8 @@ class SchedulingHistoryTest extends TestCase
 
     public function test_saved_names_are_escaped_and_manual_validation_does_not_save_a_simulation(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $payload = $this->payload();
         $payload['processes'][0]['id'] = '<script>x</script>';
         $this->post('/planificacion/manual', $payload)->assertOk();

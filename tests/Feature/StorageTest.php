@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\StorageController;
+use App\Models\User;
 use App\Services\Storage\DfRunner;
 use App\Services\Storage\FileExplorerService;
 use App\Services\Storage\FindmntRunner;
@@ -40,6 +41,8 @@ class StorageTest extends StorageTestCase
 
     public function test_page_renders_without_database_or_real_process_calls(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         DB::shouldReceive('connection')->never();
         $this->mock(LsblkRunner::class)->shouldReceive('run')->once()->andReturn('{"blockdevices":[]}');
 

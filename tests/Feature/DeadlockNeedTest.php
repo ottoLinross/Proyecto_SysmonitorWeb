@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Deadlock\NeedCalculator;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -10,6 +11,8 @@ class DeadlockNeedTest extends TestCase
 {
     public function test_valid_form_displays_calculated_need_without_database_access(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         DB::shouldReceive('connection')->never();
         $need = [[4, 2, 3], [1, 0, 7]];
 
@@ -27,6 +30,8 @@ class DeadlockNeedTest extends TestCase
 
     public function test_zero_need_is_displayed(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->postJson('/interbloqueos', [
             'n' => 1, 'm' => 1, 'allocation' => [[0]], 'max' => [[0]], 'available' => [0],
         ])->assertOk()->assertViewHas('need', [[0]])
@@ -35,6 +40,8 @@ class DeadlockNeedTest extends TestCase
 
     public function test_initial_page_does_not_calculate_or_display_need(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(NeedCalculator::class)->shouldNotReceive('calculate');
 
         $this->get('/interbloqueos')->assertOk()->assertViewMissing('need')
@@ -43,6 +50,8 @@ class DeadlockNeedTest extends TestCase
 
     public function test_invalid_scenario_does_not_reach_the_calculator(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->mock(NeedCalculator::class)->shouldNotReceive('calculate');
 
         $this->from('/interbloqueos')->post('/interbloqueos', [

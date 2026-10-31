@@ -1,61 +1,19 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>CPU y Memoria — SysMonitor</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; background: #f3f5f8; color: #182332; font-family: system-ui, sans-serif; }
-        main { max-width: 1440px; margin: 0 auto; padding: 32px 20px; }
-        a { color: #1d4ed8; }
-        a:focus-visible, .table-container:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
-        .page-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
-        .brand { margin: 0 0 8px; color: #526173; font-weight: 600; }
-        h1 { margin: 0 0 12px; font-size: 1.8rem; }
-        h2 { margin: 0 0 16px; font-size: 1.2rem; }
-        .description { margin: 0; color: #526173; line-height: 1.5; }
-        .refresh-state { margin-bottom: 24px; color: #526173; font-size: 0.9rem; }
-        .refresh-state p { margin: 0 0 8px; }
-        #metrics-status[data-state="error"] { color: #991b1b; }
-        section { min-width: 0; margin-bottom: 24px; }
-        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 12px; margin: 0; }
-        .metric-card { min-width: 0; padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
-        dt { color: #526173; line-height: 1.4; }
-        dd { margin: 8px 0 0; font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-        .cpu-usage { border-top: 4px solid #1d4ed8; }
-        .cpu-usage dd { font-size: 1.8rem; }
-        .panel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-        .table-container { min-width: 0; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
-        table { width: 100%; min-width: 360px; border-spacing: 0; font-size: 0.9rem; }
-        caption { padding: 16px; text-align: left; font-weight: 600; font-size: 1rem; }
-        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-        th { background: #eaf0f6; }
-        tbody tr:nth-child(even) { background: #f8fafc; }
-        tbody tr:hover { background: #eff6ff; }
-        tbody tr:last-child td { border-bottom: 0; }
-        .numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .command { overflow-wrap: anywhere; white-space: pre-wrap; font-family: ui-monospace, monospace; }
-        .empty { padding: 24px 16px; text-align: center; color: #526173; }
-        .chart-card { min-width: 0; margin: 0; padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
-        .chart-card figcaption { margin-bottom: 8px; font-weight: 600; }
-        .chart-card svg { display: block; width: 100%; height: auto; }
-        .chart-grid { stroke: #e2e8f0; stroke-width: 1; }
-        .chart-axis { fill: #526173; font-size: 14px; }
-        .chart-line { fill: none; stroke: #1d4ed8; stroke-width: 2; }
-        .chart-point { fill: #1d4ed8; }
-        .chart-memory .chart-line { stroke: #166534; }
-        .chart-memory .chart-point { fill: #166534; }
-        .chart-recent { margin: 12px 0 0; color: #526173; font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }
-        @media (max-width: 800px) {
-            .panel-grid { grid-template-columns: minmax(0, 1fr); }
-            main { padding: 24px 16px; }
+@extends('layouts.sysmonitor')
+
+@section('title', 'CPU y Memoria')
+@section('page-title', 'CPU y Memoria — SysMonitor')
+
+@section('styles')
+    <style>.module-cpu-memory *{ box-sizing: border-box; }.module-cpu-memory{ margin: 0; background: #f3f5f8; color: #182332; font-family: system-ui, sans-serif; }.module-cpu-memory{ max-width: 1440px; margin: 0 auto; padding: 32px 20px; }.module-cpu-memory a{ color: #1d4ed8; }.module-cpu-memory a:focus-visible, .module-cpu-memory .table-container:focus-visible{ outline: 3px solid #2563eb; outline-offset: 3px; }.module-cpu-memory .page-header{ display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }.module-cpu-memory .brand{ margin: 0 0 8px; color: #526173; font-weight: 600; }.module-cpu-memory h1{ margin: 0 0 12px; font-size: 1.8rem; }.module-cpu-memory h2{ margin: 0 0 16px; font-size: 1.2rem; }.module-cpu-memory .description{ margin: 0; color: #526173; line-height: 1.5; }.module-cpu-memory .refresh-state{ margin-bottom: 24px; color: #526173; font-size: 0.9rem; }.module-cpu-memory .refresh-state p{ margin: 0 0 8px; }.module-cpu-memory #metrics-status[data-state="error"]{ color: #991b1b; }.module-cpu-memory section{ min-width: 0; margin-bottom: 24px; }.module-cpu-memory .metric-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 12px; margin: 0; }.module-cpu-memory .metric-card{ min-width: 0; padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }.module-cpu-memory dt{ color: #526173; line-height: 1.4; }.module-cpu-memory dd{ margin: 8px 0 0; font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }.module-cpu-memory .cpu-usage{ border-top: 4px solid #1d4ed8; }.module-cpu-memory .cpu-usage dd{ font-size: 1.8rem; }.module-cpu-memory .panel-grid{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }.module-cpu-memory .table-container{ min-width: 0; overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }.module-cpu-memory table{ width: 100%; min-width: 360px; border-spacing: 0; font-size: 0.9rem; }.module-cpu-memory caption{ padding: 16px; text-align: left; font-weight: 600; font-size: 1rem; }.module-cpu-memory th, .module-cpu-memory td{ padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: top; }.module-cpu-memory th{ background: #eaf0f6; }.module-cpu-memory tbody tr:nth-child(even){ background: #f8fafc; }.module-cpu-memory tbody tr:hover{ background: #eff6ff; }.module-cpu-memory tbody tr:last-child td{ border-bottom: 0; }.module-cpu-memory .numeric{ text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }.module-cpu-memory .command{ overflow-wrap: anywhere; white-space: pre-wrap; font-family: ui-monospace, monospace; }.module-cpu-memory .empty{ padding: 24px 16px; text-align: center; color: #526173; }.module-cpu-memory .chart-card{ min-width: 0; margin: 0; padding: 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }.module-cpu-memory .chart-card figcaption{ margin-bottom: 8px; font-weight: 600; }.module-cpu-memory .chart-card svg{ display: block; width: 100%; height: auto; }.module-cpu-memory .chart-grid{ stroke: #e2e8f0; stroke-width: 1; }.module-cpu-memory .chart-axis{ fill: #526173; font-size: 14px; }.module-cpu-memory .chart-line{ fill: none; stroke: #1d4ed8; stroke-width: 2; }.module-cpu-memory .chart-point{ fill: #1d4ed8; }.module-cpu-memory .chart-memory .chart-line{ stroke: #166534; }.module-cpu-memory .chart-memory .chart-point{ fill: #166534; }.module-cpu-memory .chart-recent{ margin: 12px 0 0; color: #526173; font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }
+        @media (max-width: 800px) {.module-cpu-memory .panel-grid{ grid-template-columns: minmax(0, 1fr); }.module-cpu-memory{ padding: 24px 16px; }
         }
-    </style>
-</head>
-<body>
-    <main id="cpu-memory-panel" data-metrics-url="{{ route('cpu-memory.metrics', [], false) }}">
-        <header class="page-header">
+        </style>
+@endsection
+
+@section('content')
+    <div class="module-page module-cpu-memory" id="cpu-memory-panel" data-metrics-url="{{ route('cpu-memory.metrics', [], false) }}">
+
+            <header class="page-header">
             <div>
                 <p class="brand">SysMonitor</p>
                 <h1>CPU y Memoria</h1>
@@ -199,7 +157,10 @@
                 @endforeach
             </div>
         </section>
-    </main>
+    
+    </div>
+@endsection
+
+@section('scripts')
     <script src="{{ asset('js/cpu-memory.js') }}" defer></script>
-</body>
-</html>
+@endsection

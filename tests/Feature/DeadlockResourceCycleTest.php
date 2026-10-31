@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Deadlock\ResourceCycleResult;
 use Tests\TestCase;
 
@@ -14,6 +15,8 @@ class DeadlockResourceCycleTest extends TestCase
 
     public function test_need_does_not_trigger_a_cycle_without_explicit_request(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->get('/interbloqueos')->assertOk()->assertDontSeeText('Detección de ciclos dirigidos');
         $this->post('/interbloqueos', $this->data())->assertOk()
             ->assertSeeText('No existe una solicitud explícita activa para analizar')
@@ -22,6 +25,8 @@ class DeadlockResourceCycleTest extends TestCase
 
     public function test_cycle_is_displayed_without_claiming_deadlock_and_preserves_all_results(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/interbloqueos/solicitudes', $this->data())->assertOk()
             ->assertSeeText('Se detectó al menos un ciclo.')->assertSeeText('P1 → R1 → P1')
             ->assertSeeText('no demuestra por sí solo un interbloqueo')
@@ -35,6 +40,8 @@ class DeadlockResourceCycleTest extends TestCase
 
     public function test_explicit_request_can_be_acyclic_even_when_need_could_close_a_cycle(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['request'] = [0, 1];
         $this->post('/interbloqueos/solicitudes', $data)->assertOk()
@@ -44,6 +51,8 @@ class DeadlockResourceCycleTest extends TestCase
 
     public function test_zero_or_malformed_request_has_no_active_edges(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $data = $this->data();
         $data['request'] = [0, 0];
         $this->post('/interbloqueos/solicitudes', $data)->assertOk()

@@ -1,23 +1,16 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Historial de planificación — SysMonitor</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; background: #f3f5f8; color: #182332; font-family: system-ui, sans-serif; }
-        main { max-width: 1440px; margin: 0 auto; padding: 32px 20px; }
-        a { color: #1d4ed8; }
-        .table-container { margin-top: 24px; overflow-x: auto; background: #fff; }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
-        .errors { color: #991b1b; }
-    </style>
-</head>
-<body>
-    <main>
-        <h1>Historial de simulaciones</h1>
+@extends('layouts.sysmonitor')
+
+@section('title', 'Historial de planificación')
+
+@section('styles')
+    <style>.module-scheduling *{ box-sizing: border-box; }.module-scheduling{ margin: 0; background: #f3f5f8; color: #182332; font-family: system-ui, sans-serif; }.module-scheduling{ max-width: 1440px; margin: 0 auto; padding: 32px 20px; }.module-scheduling a{ color: #1d4ed8; }.module-scheduling .table-container{ margin-top: 24px; overflow-x: auto; background: #fff; }.module-scheduling table{ width: 100%; border-collapse: collapse; text-align: left; }.module-scheduling th, .module-scheduling td{ padding: 12px; border-bottom: 1px solid #e2e8f0; }.module-scheduling .errors{ color: #991b1b; }
+        </style>
+@endsection
+
+@section('content')
+    <div class="module-page module-scheduling">
+
+            <h1>Historial de simulaciones</h1>
         <a href="{{ route('scheduling.index') }}">Nueva simulación</a>
         @if ($historyUnavailable ?? false)
             <p class="errors" role="alert">El historial no está disponible temporalmente.</p>
@@ -51,6 +44,6 @@
                 @endif
             </nav>
         @endif
-    </main>
-</body>
-</html>
+    
+    </div>
+@endsection

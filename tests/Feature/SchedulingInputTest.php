@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Scheduling\ProcessInput;
 use App\Services\Scheduling\RandomProcessGenerator;
 use App\Services\Scheduling\SchedulingProcess;
@@ -16,6 +17,8 @@ class SchedulingInputTest extends TestCase
 {
     public function test_manual_input_returns_typed_processes_without_database_access(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         DB::shouldReceive('connection')->never();
 
         $this->post('/planificacion/manual', ['processes' => [$this->process()]])
@@ -32,6 +35,8 @@ class SchedulingInputTest extends TestCase
     #[DataProvider('invalidProcesses')]
     public function test_manual_input_rejects_invalid_processes(array $changes, string $field): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->from('/planificacion')->post('/planificacion/manual', [
             'processes' => [array_replace($this->process(), $changes)],
         ])->assertRedirect('/planificacion')->assertSessionHasErrors('processes.0.'.$field);
@@ -64,12 +69,16 @@ class SchedulingInputTest extends TestCase
 
     public function test_duplicate_ids_are_rejected(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/planificacion/manual', ['processes' => [$this->process(), $this->process()]])
             ->assertSessionHasErrors(['processes.0.id', 'processes.1.id']);
     }
 
     public function test_missing_fields_and_empty_or_excessive_batches_are_rejected(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/planificacion/manual', [])->assertSessionHasErrors('processes');
         $this->post('/planificacion/manual', ['processes' => []])->assertSessionHasErrors('processes');
         $this->post('/planificacion/manual', ['processes' => [[]]])
@@ -80,6 +89,8 @@ class SchedulingInputTest extends TestCase
 
     public function test_upper_bounds_and_html_integer_strings_are_accepted(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/planificacion/manual', ['processes' => [[
             'id' => str_repeat('P', 32), 'arrival_time' => '10000', 'burst_time' => '1000', 'priority' => '10',
         ]]])->assertOk()->assertViewHas('processes', fn (array $processes): bool => $processes[0]->arrivalTime === 10000
@@ -89,6 +100,8 @@ class SchedulingInputTest extends TestCase
     #[DataProvider('invalidCounts')]
     public function test_random_input_rejects_invalid_counts(mixed $count): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/planificacion/aleatoria', ['count' => $count])->assertSessionHasErrors('count');
     }
 
@@ -123,6 +136,8 @@ class SchedulingInputTest extends TestCase
 
     public function test_random_endpoint_renders_requested_count_without_database_access(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         DB::shouldReceive('connection')->never();
         $this->post('/planificacion/aleatoria', ['count' => '3'])->assertOk()
             ->assertViewIs('scheduling.index')
@@ -132,12 +147,16 @@ class SchedulingInputTest extends TestCase
 
     public function test_process_names_are_escaped_in_results(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/planificacion/manual', ['processes' => [array_replace($this->process(), ['id' => '<script>x</script>'])]])
             ->assertOk()->assertSee('&lt;script&gt;x&lt;/script&gt;', false)->assertDontSee('<script>x</script>', false);
     }
 
     public function test_forms_expose_post_actions_csrf_and_limits(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->get('/planificacion')->assertOk()
             ->assertSee(route('scheduling.manual'), false)
             ->assertSee(route('scheduling.random'), false)
@@ -161,6 +180,8 @@ class SchedulingInputTest extends TestCase
 
     public function test_empty_batch_errors_leave_an_editable_row(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->from('/planificacion')->post('/planificacion/manual', ['processes' => []])
             ->assertRedirect('/planificacion');
         $this->get('/planificacion')->assertOk()

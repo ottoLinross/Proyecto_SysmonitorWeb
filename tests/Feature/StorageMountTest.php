@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Storage\DfRunner;
 use App\Services\Storage\FileExplorerService;
 use App\Services\Storage\FindmntRunner;
@@ -30,6 +31,8 @@ class StorageMountTest extends StorageTestCase
 
     public function test_multiple_active_and_configured_mounts_are_separate_and_escaped(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(FindmntRunner::class)->shouldReceive('run')->andReturn(json_encode(['filesystems' => [
             ['source' => '/dev/root', 'target' => '/', 'fstype' => 'ext4'],
             ['source' => 'tmpfs', 'target' => '/<script>alert(1)</script>', 'fstype' => 'tmpfs'],
@@ -52,6 +55,8 @@ class StorageMountTest extends StorageTestCase
     #[DataProvider('invalidOutputs')]
     public function test_invalid_findmnt_output(string $output): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(FindmntRunner::class)->shouldReceive('run')->andReturn($output);
         $this->get('/almacenamiento')->assertOk()->assertSeeText('No se pudieron consultar los montajes activos.')
             ->assertSeeText('No se encontraron montajes configurados válidos.');
@@ -59,6 +64,8 @@ class StorageMountTest extends StorageTestCase
 
     public function test_failures_are_controlled_and_preserve_previous_sections(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(FindmntRunner::class)->shouldReceive('run')->andThrow(new \RuntimeException('secret'));
         $this->mock(FstabReader::class)->shouldReceive('read')->andThrow(new \RuntimeException('secret'));
         $this->get('/almacenamiento')->assertOk()->assertSeeText('No se pudieron consultar los montajes activos.')
@@ -68,6 +75,8 @@ class StorageMountTest extends StorageTestCase
 
     public function test_empty_results(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->get('/almacenamiento')->assertOk()->assertSeeText('No se encontraron montajes activos.')
             ->assertSeeText('No se encontraron montajes configurados válidos.');
     }
@@ -88,6 +97,8 @@ class StorageMountTest extends StorageTestCase
 
     public function test_partition_tables_preserve_hierarchy(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $base = ['name' => 'disk', 'path' => '/dev/example', 'type' => 'disk', 'size' => 100, 'fstype' => null, 'mountpoints' => null, 'model' => null];
         $this->mock(LsblkRunner::class)->shouldReceive('run')->andReturn(json_encode(['blockdevices' => [
             $base + ['pttype' => 'gpt', 'children' => [$base + ['pttype' => null]]],

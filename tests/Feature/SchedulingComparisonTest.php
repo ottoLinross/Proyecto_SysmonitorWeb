@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\CreatesSchedulingStorage;
 use Tests\TestCase;
@@ -12,6 +13,8 @@ class SchedulingComparisonTest extends TestCase
 
     public function test_comparison_table_renders_five_algorithms_and_known_averages_in_order(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $response = $this->post('/planificacion/comparar', $this->payload());
         $response->assertOk()->assertViewIs('scheduling.index')
             ->assertSeeText('Comparación de algoritmos')->assertSeeText('Round Robin utiliza quantum 2.')
@@ -39,6 +42,8 @@ class SchedulingComparisonTest extends TestCase
 
     public function test_user_quantum_is_applied_and_preserved_in_the_form(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $payload = $this->payload();
         $payload['quantum'] = '5';
         $this->post('/planificacion/comparar', $payload)->assertOk()
@@ -50,6 +55,8 @@ class SchedulingComparisonTest extends TestCase
     #[DataProvider('invalidQuanta')]
     public function test_comparison_requires_valid_quantum_even_without_algorithm_selection(mixed $quantum): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->from('/planificacion')->post('/planificacion/comparar', array_replace($this->payload(), ['quantum' => $quantum]))
             ->assertRedirect('/planificacion')->assertSessionHasErrors('quantum');
     }
@@ -61,6 +68,8 @@ class SchedulingComparisonTest extends TestCase
 
     public function test_hidden_processes_are_revalidated_before_comparison(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $payload = $this->payload();
         $payload['processes'][1]['id'] = 'A';
         $this->post('/planificacion/comparar', $payload)->assertSessionHasErrors('processes.1.id');
@@ -71,6 +80,8 @@ class SchedulingComparisonTest extends TestCase
 
     public function test_validated_lot_exposes_comparison_button_and_individual_gantt_still_works(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/planificacion/manual', $this->payload())->assertOk()
             ->assertSee('formaction="'.route('scheduling.compare').'"', false)
             ->assertSeeText('Comparar cinco algoritmos')->assertSee('name="_token"', false);

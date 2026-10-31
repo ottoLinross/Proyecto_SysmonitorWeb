@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Storage\DfRunner;
 use App\Services\Storage\FileExplorerService;
 use App\Services\Storage\FindmntRunner;
@@ -61,6 +62,8 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_hidden_entries_and_symlink_aliases_are_not_exposed_or_navigable(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         mkdir($this->root.'/.git');
         mkdir($this->root.'/.credentials');
         file_put_contents($this->root.'/.env', 'test fixture');
@@ -80,6 +83,8 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_root_listing_is_sorted_and_files_cannot_be_opened(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $result = app(FileExplorerService::class)->browse();
         $this->assertTrue($result['available']);
         $this->assertSame('', $result['path']);
@@ -95,6 +100,8 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_subdirectory_navigation_and_parent_stay_inside_root(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $service = app(FileExplorerService::class);
         $result = $service->browse('sub/nested');
         $this->assertSame('sub/nested', $result['path']);
@@ -117,6 +124,8 @@ class StorageExplorerTest extends StorageTestCase
     #[DataProvider('unsafePaths')]
     public function test_unsafe_paths_are_rejected_by_service_and_http(mixed $path): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->assertFalse(app(FileExplorerService::class)->browse($path)['available']);
         $this->get('/almacenamiento?'.http_build_query(['path' => $path]))->assertOk()
             ->assertSeeText('No se pudo acceder al directorio solicitado.')
@@ -125,12 +134,16 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_raw_encoded_traversal_is_rejected_after_http_decoding(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->get('/almacenamiento?path=%2e%2e%2froot-neighbor')->assertOk()
             ->assertSeeText('No se pudo acceder al directorio solicitado.');
     }
 
     public function test_symlink_escape_and_directory_prefix_collision_are_blocked(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         symlink($this->sandbox.'/root-neighbor', $this->root.'/escape');
         symlink($this->root.'/sub', $this->root.'/inside');
         symlink($this->sandbox.'/missing', $this->root.'/broken');
@@ -148,6 +161,8 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_missing_empty_and_unreadable_directories_have_controlled_messages(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->get('/almacenamiento?path=missing')->assertOk()->assertSeeText('No se pudo acceder al directorio solicitado.');
         $this->get('/almacenamiento?path=empty')->assertOk()->assertSeeText('El directorio está vacío.');
         $service = new class($this->root) extends FileExplorerService
@@ -164,6 +179,8 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_html_names_and_navigation_urls_are_escaped(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         file_put_contents($this->root.'/<img onerror=alert(1)>', 'never displayed');
         mkdir($this->root.'/folder"<tag>&');
         $this->get('/almacenamiento')->assertOk()->assertSee('&lt;img onerror=alert(1)&gt;', false)
@@ -173,6 +190,8 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_file_directory_and_link_metadata_use_the_entry_itself(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         chmod($this->root.'/example.txt', 0644);
         chmod($this->root.'/sub', 0755);
         symlink($this->root.'/example.txt', $this->root.'/file-link');
@@ -241,6 +260,8 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_invalid_account_and_failed_metadata_are_safe_and_owner_is_escaped(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $service = new class($this->root) extends FileExplorerService
         {
             public array|false $user = ['name' => ''];
@@ -283,6 +304,8 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_symlink_loops_are_not_navigable_and_do_not_leak_paths(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         symlink('loop-b', $this->root.'/loop-a');
         symlink('loop-a', $this->root.'/loop-b');
         symlink('.', $this->root.'/self-root');
@@ -299,6 +322,8 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_unicode_names_and_directory_navigation_work_without_reading_file_contents(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         mkdir($this->root.'/Árbol-日本語');
         file_put_contents($this->root.'/Árbol-日本語/📄 résumé.txt', 'private contents');
         $this->get('/almacenamiento')->assertOk()->assertSeeText('Árbol-日本語');
@@ -308,6 +333,8 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_unreadable_files_are_never_opened_and_inaccessible_directories_fail_safely(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         chmod($this->root.'/example.txt', 0000);
         chmod($this->root.'/sub', 0000);
         try {
@@ -326,6 +353,8 @@ class StorageExplorerTest extends StorageTestCase
 
     public function test_http_cannot_write_delete_upload_or_download_files(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         foreach (['POST', 'PUT', 'PATCH', 'DELETE'] as $method) {
             $this->call($method, '/almacenamiento', ['path' => 'example.txt', 'action' => 'delete', 'content' => 'changed'])
                 ->assertStatus(405);

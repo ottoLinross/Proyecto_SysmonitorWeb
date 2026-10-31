@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Storage\DfRunner;
 use App\Services\Storage\FileExplorerService;
 use App\Services\Storage\FilesystemUsageService;
@@ -42,6 +43,8 @@ class StorageDfTest extends StorageTestCase
     #[DataProvider('validOutputs')]
     public function test_parses_and_renders_realistic_fixtures(string $rows, int $count, string $mount): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(DfRunner::class)->shouldReceive('run')->twice()->andReturn(self::HEADER.$rows);
         $result = app(FilesystemUsageService::class)->usage();
         $this->assertTrue($result['available']);
@@ -66,6 +69,8 @@ class StorageDfTest extends StorageTestCase
     #[DataProvider('invalidOutputs')]
     public function test_invalid_output_is_a_controlled_error(string $output): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(DfRunner::class)->shouldReceive('run')->once()->andReturn($output);
         $this->get('/almacenamiento')->assertOk()->assertSeeText('No se pudo consultar el uso del espacio.')
             ->assertDontSeeText('No se encontraron sistemas de archivos montados.')->assertSeeText('disk-preserved');
@@ -73,6 +78,8 @@ class StorageDfTest extends StorageTestCase
 
     public function test_header_only_means_no_results(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(DfRunner::class)->shouldReceive('run')->once()->andReturn(self::HEADER);
         $this->get('/almacenamiento')->assertOk()->assertSeeText('No se encontraron sistemas de archivos montados.')
             ->assertDontSeeText('No se pudo consultar el uso del espacio.');
@@ -80,6 +87,8 @@ class StorageDfTest extends StorageTestCase
 
     public function test_failure_hides_exception_details_and_preserves_lsblk(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(DfRunner::class)->shouldReceive('run')->once()->andThrow(new RuntimeException('private diagnostic'));
         $this->get('/almacenamiento')->assertOk()->assertSeeText('No se pudo consultar el uso del espacio.')
             ->assertDontSeeText('private diagnostic')->assertSeeText('disk-preserved');
@@ -87,6 +96,8 @@ class StorageDfTest extends StorageTestCase
 
     public function test_html_is_escaped(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(DfRunner::class)->shouldReceive('run')->once()->andReturn(self::HEADER."<script>alert(1)</script> 1G 0 1G 0% /<img src=x onerror=alert(1)>\n");
         $this->get('/almacenamiento')->assertOk()
             ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)

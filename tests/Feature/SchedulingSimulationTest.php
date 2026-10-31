@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Scheduling\SchedulingSimulation;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\CreatesSchedulingStorage;
@@ -14,6 +15,8 @@ class SchedulingSimulationTest extends TestCase
     #[DataProvider('algorithms')]
     public function test_blade_renders_backend_metrics_and_every_gantt_segment(string $algorithm): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $response = $this->post('/planificacion/simular', $this->payload($algorithm));
         $response->assertOk()->assertViewIs('scheduling.index')
             ->assertSeeText('Diagrama de Gantt')->assertSeeText('CPU ociosa (idle)')
@@ -51,6 +54,8 @@ class SchedulingSimulationTest extends TestCase
     #[DataProvider('invalidOptions')]
     public function test_invalid_simulation_options_are_rejected(array $options, string $field): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/planificacion/simular', array_replace($this->payload('round_robin'), $options))
             ->assertSessionHasErrors($field);
     }
@@ -67,6 +72,8 @@ class SchedulingSimulationTest extends TestCase
 
     public function test_processes_are_revalidated_on_simulation_and_quantum_is_only_required_for_rr(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $payload = $this->payload('fcfs');
         unset($payload['quantum']);
         $this->post('/planificacion/simular', $payload)->assertOk();
@@ -76,6 +83,8 @@ class SchedulingSimulationTest extends TestCase
 
     public function test_simulation_names_are_escaped_in_metrics_and_gantt(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $payload = $this->payload('fcfs');
         $payload['processes'][0]['id'] = '<script>x</script>';
         $this->post('/planificacion/simular', $payload)->assertOk()
@@ -84,6 +93,8 @@ class SchedulingSimulationTest extends TestCase
 
     public function test_validated_batch_exposes_simulation_form_with_csrf_and_process_data(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_ADMIN]), 'web');
+
         $this->post('/planificacion/manual', $this->payload('fcfs'))->assertOk()
             ->assertSee(route('scheduling.simulate'), false)
             ->assertSee('name="processes[0][id]" value="A"', false)

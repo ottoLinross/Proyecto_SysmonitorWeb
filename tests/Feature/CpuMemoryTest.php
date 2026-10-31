@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\CpuMemoryController;
 use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\TestProcessController;
+use App\Models\User;
 use App\Services\System\CpuInfoService;
 use App\Services\System\CpuUsageService;
 use App\Services\System\MemoryService;
@@ -50,6 +51,8 @@ class CpuMemoryTest extends TestCase
     #[DataProvider('unavailableServices')]
     public function test_page_handles_service_exceptions_without_exposing_details(string $service, string $method): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         config(['app.debug' => true]);
         $this->mock($service, function (MockInterface $mock) use ($method) {
             $mock->shouldReceive($method)->once()->andThrow(new RuntimeException('/proc/internal private-marker'));
@@ -81,6 +84,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_panel_renders_the_main_sections_and_metric_labels(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $response = $this->get('/cpu-memoria');
 
         $response->assertOk();
@@ -117,6 +122,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_panel_includes_refresh_targets_and_keeps_server_rendered_content(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $response = $this->get('/cpu-memoria');
 
         $response->assertOk();
@@ -142,6 +149,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_panel_escapes_model_and_formatted_uptime(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $model = '<img src=x onerror="alert(1)">';
         $uptime = '<script>alert("uptime")</script>';
         $this->mock(CpuInfoService::class, function (MockInterface $mock) use ($model, $uptime) {
@@ -162,6 +171,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_panel_renders_accessible_svg_charts_and_text_alternatives(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $response = $this->get('/cpu-memoria');
 
         $response->assertOk();
@@ -179,6 +190,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_cpu_memory_page_renders_the_initial_view(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $info = [
             'model' => 'Example CPU <script>alert(1)</script>',
             'logical_processors' => 4,
@@ -209,6 +222,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_cpu_memory_page_handles_unavailable_information(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(CpuUsageService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getUsagePercent')->once()->andReturn(null);
         });
@@ -229,6 +244,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_memory_and_disabled_swap_are_displayed_in_mib(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $info = [
             'memory_total_bytes' => 1048576,
             'memory_used_bytes' => 524288,
@@ -253,6 +270,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_zero_load_average_is_displayed_as_available(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(CpuInfoService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getInfo')->once()->andReturn([
                 'model' => null, 'logical_processors' => null,
@@ -269,6 +288,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_cpu_memory_page_displays_zero_usage_as_available(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(CpuUsageService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getUsagePercent')->once()->andReturn(0.0);
         });
@@ -282,6 +303,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_m1_processes_page_still_renders(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->partialMock(ProcessService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getProcesses')->once()->andReturn([]);
         });
@@ -295,6 +318,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_both_rankings_reuse_one_process_read_and_escape_commands(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $processes = [];
         foreach ([3, 1, 6, 2, 5, 4] as $pid) {
             $processes[] = [
@@ -326,6 +351,8 @@ class CpuMemoryTest extends TestCase
 
     public function test_empty_process_list_shows_both_empty_rankings(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(ProcessService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getProcesses')->once()->andReturn([]);
         });

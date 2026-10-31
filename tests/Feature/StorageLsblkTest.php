@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\Storage\DfRunner;
 use App\Services\Storage\FileExplorerService;
 use App\Services\Storage\FindmntRunner;
@@ -35,6 +36,8 @@ class StorageLsblkTest extends StorageTestCase
 
     public function test_hierarchy_nulls_loops_and_spaces_are_preserved_and_rendered(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $devices = [
             self::device(['children' => [self::device(['name' => 'partition one', 'type' => 'part', 'model' => null, 'mountpoints' => [null, '/media/My disk'], 'fstype' => 'ext4'])]]),
             self::device(['name' => 'empty disk']),
@@ -64,12 +67,16 @@ class StorageLsblkTest extends StorageTestCase
     #[DataProvider('invalidOutputs')]
     public function test_invalid_output_is_controlled(string $output): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(LsblkRunner::class)->shouldReceive('run')->once()->andReturn($output);
         $this->get('/almacenamiento')->assertOk()->assertSeeText('No se pudo consultar la información de almacenamiento.');
     }
 
     public function test_command_failure_does_not_expose_details(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         $this->mock(LsblkRunner::class)->shouldReceive('run')->once()->andThrow(new RuntimeException('internal sensitive detail'));
         $this->get('/almacenamiento')->assertOk()->assertSeeText('No se pudo consultar la información de almacenamiento.')
             ->assertDontSeeText('internal sensitive detail');

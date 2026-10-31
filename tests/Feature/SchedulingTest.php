@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\SchedulingController;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -22,6 +23,8 @@ class SchedulingTest extends TestCase
 
     public function test_initial_page_renders_without_database_queries(): void
     {
+        $this->actingAs((new User)->forceFill(['id' => 1, 'role' => User::ROLE_OBSERVER]), 'web');
+
         DB::shouldReceive('connection')->never();
 
         $this->get('/planificacion')
